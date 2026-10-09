@@ -1,101 +1,65 @@
-Используй библиотеку pyndantic AI чтобы разработать агента. Сохранять историю нужно в папке ~/.baylang/history/unixtimestamp.json. Промпт находится ~/.baylang/prompt.txt
+Нужно разработать систему foreground для выполнения задач. На сервере есть список задач для Agent. Агент переодически раз в 5 минут запрашивает план с сервера и выполняет одну задачу.
 
-from dotenv import find_dotenv, load_dotenv
-from pydantic_core import to_jsonable_python
-from pydantic_ai import Agent, RunContext, ModelRequest, ModelResponse, SystemPromptPart, UserPromptPart, TextPart
-from pydantic_ai.models.openrouter import OpenRouterModel, OpenRouterModelSettings, OpenRouterProviderConfig
-from pydantic_ai.providers.openrouter import OpenRouterProvider
-from pydantic_ai.capabilites import LocalWorkSpace
-from pydantic_ai_harness import FileSystem, RepoContext, Shell, ClearToolResults
+Сервер реализовать на php и сохранить в папку server. Файлы api.php, index.php - интерфейс, config.php - конфигурация, main.css и main.js
 
-APP_URL = "https://baylang.com/"
-APP_TITLE = "BayLang AI"
+config.php содержит конфигурацию сервера:
+- пароль для basic auth
+- список проектов и агентов
 
-load_dotenv(dotenv_path=find_dotenv(usecwd=True))
+```
+$PROJECTS = [
+    [
+        "name" => "project"
+        "label" => "Project"
+    ]
+]
 
-def build_agent(capabilities=None):
-    
-    if capabilities is None:
-        capabilities = []
-    
-    config = OpenRouterProviderConfig()
+$AGENTS = [
+    [
+        "name" => "default",
+        "label" => "default"
+    ]
+]
+```
 
-    if os.environ.getenv("OPENROUTER_PROVIDERS"):
-        items = os.environ.getenv("OPENROUTER_PROVIDERS").split(",")
-        config["only"] = list(map(lambda s: s.strip(), items))
+Статусы задач:
+- Черновик
+- Запланирован
+- Выполняется
+- Выполнен
+- Ошибка
 
-    model = OpenRouterModel(
-        os.environ.getenv("OPENROUTER_MODEL"),
-        provider=OpenRouterProvider(
-            api_key=os.environ.getenv("OPENROUTER_API_KEY"),
-            app_url=APP_URL,
-            app_title=APP_TITLE,
-        ),
-        settings=OpenRouterModelSettings(
-            openrouter_cache_instructions=True,
-            openrouter_cache_messages=True,
-            openrouter_cache_tool_definitions=True,
-            openrouter_provider=config,
-        )
-    )
+Задача:
+- Название
+- Проект
+- Агент
+- Название ветки
+- Дата когда выполнить задачу (не ранее чем). Если null то можно выполнять
 
-    agent = Agent(
-        model,
-        capabilities=capabilities,
-    )
-    
-    return agent
+Для сервера требуется реализовать простой api и UI интерфейс используя аякс. Адаптировать для мобильного телефона UI. Нужно реализовать список задач, редактирование и удаление задачи. Желательно без перезагрузки экрана. Реализовать фильтр по статусу, агенту, проекту. По названию и пагинация.
 
-def build_software_engineer(capabilities=None):
-    if capabilities is None:
-        capabilities = []
-    
-    capabilities.extend([
-        LocalWorkSpace(working_dir=os.getcwd()),
-        FileSystem(),
-        RepoContext(),
-        Shell(),
-        ClearToolResults(
-            keep_pairs=6,
-            max_fraction=0.6,
-            min_clear_tokens=20_000,
-        )
-    ])
-    
-    return build_agent(capabilities)
+Клиент:
 
-class AI:
-    def __init__(self, agent):
-        self.agent = agent
-        self.history = []
-        self.context = []
-        self.id = ""
-        self.file_name = ""
-    
-    def save(self):
-        data = {
-            "id": self.id
-            "history": to_jsonable_python(self.history),
-            "context": to_jsonable_python(self.context),
-        }
-        with (open(self.filename, "w")) as f:
-            f.save(data)
-    
-    def add_prompt(self, prompt):
-        self.context.append(
-            ModelRequest(parts=[SystemPromptPart(prompt)])
-        )
-    
-    async def send(self, user_message):
-        self.history.append(
-            ModelRequest(parts=[UserPromptPart(user_message)])
-        )
-        result = await self.agent.run(
-            user_message, 
-            message_history=self.context
-        )
-        self.histort.append(
-            ModelResponse(parts=[TextPart(result.output)])
-        )
-        self.context = result.all_messages()
-        return result.output
+В main.py нужно добавить ArgParser ./main.py --foreground запускает систему.
+
+В ~/.baylang/config.json хранится:
+- название агента, авторизация
+- список проектов и путь к ним
+
+Цикл foreground:
+- Получить список задач (статус запланирован), только свои задачи фильтр по agent_id
+- Определить задачу
+- Скачать проект git pull, переключиться на ветку
+- Скопировать задачу в docs/task.md
+- Выполнить задачу через ai.send используя user_message что нужно выполнить задание из task.md
+- Сделать комит
+- Push
+- Сообщить серверу что задача выполнена
+
+Если произошла ошибка, то сообщить серверу сообщение об ошибке
+
+При создании комита, если есть файл get_commit_date в PATH, то запустить, она вернет дату комита. Параметр вызова get_commit_date <timestamp прошлого комита>
+
+Создать docker контейнер для клиента. Создать пользователя user с id 1000, домашней папкой /data/home и запускать foreground.
+
+Добавить логгер и сохранять логи в папку ~/.baylang/logs, включить ротацию. Логи также выводить в docker контейнер

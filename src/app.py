@@ -3,7 +3,6 @@ import json
 import time
 from pathlib import Path
 
-from dotenv import find_dotenv, load_dotenv
 from pydantic_core import to_jsonable_python
 from pydantic_ai import (
     Agent,
@@ -31,8 +30,6 @@ APP_TITLE = "BayLang AI"
 BAYLANG_DIR = Path.home() / ".baylang"
 HISTORY_DIR = BAYLANG_DIR / "history"
 PROMPT_FILE = BAYLANG_DIR / "prompt.txt"
-
-load_dotenv(dotenv_path=find_dotenv(usecwd=True))
 
 hooks = Hooks()
 
@@ -157,9 +154,6 @@ class AI:
     async def send(self, user_message: str) -> str:
         """Один шаг agent loop: user -> agent -> assistant."""
         self.history.append(
-            ModelRequest(parts=[UserPromptPart(content=user_message)])
-        )
-        self.context.append(
             ModelRequest(parts=[UserPromptPart(content=user_message)])
         )
 
