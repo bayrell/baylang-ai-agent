@@ -1,6 +1,4 @@
-Используй библиотеку pyndantic AI чтобы разработать агента.
-
-Создай в app.py один файл, и main.py для запуска в папке src
+Используй библиотеку pyndantic AI чтобы разработать агента. Сохранять историю нужно в папке ~/.baylang/history/unixtimestamp.json. Промпт находится ~/.baylang/prompt.txt
 
 from dotenv import find_dotenv, load_dotenv
 from pydantic_core import to_jsonable_python
