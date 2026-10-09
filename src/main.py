@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 
-import asyncio
+import asyncio, os
 from dotenv import find_dotenv, load_dotenv
 from app import AI, build_software_engineer, run_loop
 
+os.environ["PYDANTIC_AI_NO_BANNER"] = "1"
 load_dotenv(dotenv_path=find_dotenv(usecwd=True))
 
 

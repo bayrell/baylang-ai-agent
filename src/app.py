@@ -21,8 +21,8 @@ from pydantic_ai.models.openrouter import (
     OpenRouterProviderConfig,
 )
 from pydantic_ai.providers.openrouter import OpenRouterProvider
-from pydantic_ai.capabilities import LocalWorkSpace, Hooks
-from pydantic_ai_harness import FileSystem, RepoContext, Shell, ClearToolResults
+from pydantic_ai.capabilities import LocalWorkspace, Hooks
+from pydantic_ai_harness import FileSystem, RepoContext, ClearToolResults
 
 
 APP_URL = "https://baylang.com/"
@@ -48,14 +48,14 @@ def build_agent(capabilities=None):
 
     config = OpenRouterProviderConfig()
 
-    if os.environ.getenv("OPENROUTER_PROVIDERS"):
-        items = os.environ.getenv("OPENROUTER_PROVIDERS").split(",")
+    if os.getenv("OPENROUTER_PROVIDERS"):
+        items = os.getenv("OPENROUTER_PROVIDERS").split(",")
         config["only"] = list(map(lambda s: s.strip(), items))
 
     model = OpenRouterModel(
-        os.environ.getenv("OPENROUTER_MODEL"),
+        os.getenv("OPENROUTER_MODEL"),
         provider=OpenRouterProvider(
-            api_key=os.environ.getenv("OPENROUTER_API_KEY"),
+            api_key=os.getenv("OPENROUTER_API_KEY"),
             app_url=APP_URL,
             app_title=APP_TITLE,
         ),
@@ -82,10 +82,9 @@ def build_software_engineer(capabilities=None):
         capabilities = []
 
     capabilities.extend([
-        LocalWorkSpace(working_dir=os.getcwd()),
+        LocalWorkspace(working_dir=os.getcwd()),
         FileSystem(),
         RepoContext(),
-        Shell(),
         ClearToolResults(
             keep_pairs=6,
             max_fraction=0.6,
@@ -206,7 +205,7 @@ def rebuild_message(msg: dict):
 
 async def run_loop(ai: AI):
     """Agent Loop: читает ввод, отправляет агенту, печатает ответ, сохраняет историю."""
-    print("BayLang AI готов. Команды: /save — сохранить, /exit — выход.")
+    print("BayLang AI готов. Команды: /exit — выход.")
 
     while True:
         try:
@@ -222,11 +221,6 @@ async def run_loop(ai: AI):
             ai.save()
             print("История сохранена. Пока!")
             break
-
-        if user_message == "/save":
-            ai.save()
-            print(f"Сохранено: {ai.file_name}")
-            continue
 
         try:
             answer = await ai.send(user_message)
