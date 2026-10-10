@@ -74,12 +74,15 @@ def build_agent(capabilities=None):
     return agent
 
 
-def build_software_engineer(capabilities=None):
+def build_software_engineer(path=None, capabilities=None):
     if capabilities is None:
         capabilities = []
-
+    
+    if path is None:
+        path = os.getcwd()
+    
     capabilities.extend([
-        LocalWorkspace(working_dir=os.getcwd()),
+        LocalWorkspace(working_dir=path),
         FileSystem(),
         RepoContext(),
         ClearToolResults(
