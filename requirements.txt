@@ -1,0 +1,4 @@
+pydantic-ai
+pydantic-ai-harness
+python-dotenv
+httpx
