@@ -20,7 +20,7 @@ if (($_SERVER['PHP_AUTH_PW'] ?? '') !== ($config['password'] ?? '')) {
 <body>
 
 <header>
-  <h1>🧠 BayLang <small>Task Server</small></h1>
+  <h1>BayLang <small>Task Server</small></h1>
 </header>
 
 <nav id="tabs">
