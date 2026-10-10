@@ -3,24 +3,25 @@
 body {
   margin: 0;
   font-family: system-ui, -apple-system, sans-serif;
-  background: #0f1220;
-  color: #e8e8f0;
+  background: #f4f6fb;
+  color: #1e2235;
 }
 
 header {
   padding: 14px 16px;
-  background: #171b30;
-  border-bottom: 1px solid #262b45;
+  background: #ffffff;
+  border-bottom: 1px solid #dde1ea;
 }
 
 h1 { margin: 0; font-size: 20px; }
-h1 small { opacity: .5; font-weight: 400; font-size: 14px; }
+h1 small { opacity: .55; font-weight: 400; font-size: 14px; }
 
 nav {
   display: flex;
   gap: 4px;
   padding: 8px 12px;
-  background: #171b30;
+  background: #ffffff;
+  border-bottom: 1px solid #e8ebf2;
   position: sticky;
   top: 0;
   z-index: 5;
@@ -31,13 +32,13 @@ nav {
   padding: 8px;
   border: none;
   background: transparent;
-  color: #8b93b5;
+  color: #6b7394;
   border-radius: 8px;
   cursor: pointer;
   font-size: 14px;
 }
 
-.tab-btn.active { background: #2a3050; color: #fff; }
+.tab-btn.active { background: #e4e8f5; color: #1e2235; }
 
 main { padding: 12px; max-width: 900px; margin: 0 auto; }
 
@@ -58,40 +59,40 @@ input, select, button { font: inherit; }
 input, select {
   padding: 8px 10px;
   border-radius: 8px;
-  border: 1px solid #303657;
-  background: #141828;
-  color: #e8e8f0;
+  border: 1px solid #ccd1de;
+  background: #ffffff;
+  color: #1e2235;
 }
 
 button {
   padding: 8px 12px;
   border-radius: 8px;
-  border: 1px solid #303657;
-  background: #222844;
-  color: #e8e8f0;
+  border: 1px solid #ccd1de;
+  background: #eef0f6;
+  color: #1e2235;
   cursor: pointer;
 }
 
 button.primary { background: #3b82f6; border-color: #3b82f6; color: #fff; }
-button:hover { filter: brightness(1.15); }
+button:hover { filter: brightness(0.96); }
 button:disabled { opacity: .4; cursor: default; }
 
 .task, .item {
   display: flex;
   justify-content: space-between;
   gap: 8px;
-  background: #171b30;
-  border: 1px solid #262b45;
+  background: #ffffff;
+  border: 1px solid #dde1ea;
   border-radius: 10px;
   padding: 10px 12px;
   margin-bottom: 8px;
 }
 
 .task-title { font-weight: 600; }
-.task-meta { font-size: 12px; color: #8b93b5; margin-top: 4px; }
+.task-meta { font-size: 12px; color: #6b7394; margin-top: 4px; }
 .task-error {
   font-size: 12px;
-  color: #f87171;
+  color: #dc2626;
   margin-top: 4px;
   word-break: break-word;
   max-width: 600px;
@@ -100,7 +101,7 @@ button:disabled { opacity: .4; cursor: default; }
 .task-actions, .item-actions {
   display: flex;
   gap: 6px;
-  align-items: flex-start;
+  align-items: stretch;
   flex-shrink: 0;
 }
 
@@ -110,13 +111,14 @@ button:disabled { opacity: .4; cursor: default; }
   border-radius: 999px;
   vertical-align: middle;
   white-space: nowrap;
+  color: #fff;
 }
 
-.st-draft   { background: #374151; }
-.st-planned { background: #1d4ed8; }
-.st-running { background: #b45309; }
-.st-done    { background: #15803d; }
-.st-error   { background: #b91c1c; }
+.st-draft   { background: #6b7280; }
+.st-planned { background: #2563eb; }
+.st-running { background: #d97706; }
+.st-done    { background: #16a34a; }
+.st-error   { background: #dc2626; }
 
 .pager {
   display: flex;
@@ -124,7 +126,7 @@ button:disabled { opacity: .4; cursor: default; }
   justify-content: center;
   align-items: center;
   margin: 12px 0;
-  color: #8b93b5;
+  color: #6b7394;
   font-size: 14px;
 }
 
@@ -138,29 +140,30 @@ button:disabled { opacity: .4; cursor: default; }
 dialog {
   border: none;
   border-radius: 12px;
-  background: #171b30;
-  color: #e8e8f0;
+  background: #ffffff;
+  color: #1e2235;
   padding: 0;
   width: min(92vw, 420px);
+  box-shadow: 0 8px 30px rgba(0, 0, 0, .15);
 }
 
-dialog::backdrop { background: rgba(0, 0, 0, .6); }
+dialog::backdrop { background: rgba(0, 0, 0, .35); }
 
 .form { display: flex; flex-direction: column; gap: 10px; padding: 16px; }
 .form h2 { margin: 0 0 4px; font-size: 18px; }
-.form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #8b93b5; }
+.form label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: #6b7394; }
 .form input, .form select { width: 100%; }
 
 .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 4px; }
 
 code {
-  background: #222844;
+  background: #eef0f6;
   padding: 1px 6px;
   border-radius: 6px;
   font-size: 12px;
 }
 
-.empty { color: #8b93b5; text-align: center; padding: 20px; }
+.empty { color: #6b7394; text-align: center; padding: 20px; }
 
 @media (max-width: 560px) {
   .task, .item { flex-direction: column; }
