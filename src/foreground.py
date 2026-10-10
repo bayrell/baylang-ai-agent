@@ -125,8 +125,8 @@ async def process_task(task: dict, config: dict, agent_name: str):
     task_id = task["id"]
     branch = task.get("branch") or "main"
     logger.info(
-        "Задача #%s: %s (проект %s, ветка %s)",
-        task_id, task["name"], project_api, branch,
+        "Задача %s (проект %s, ветка %s)",
+        task["name"], project_api, branch,
     )
 
     # Скачиваем проект и переключаемся на ветку
@@ -143,17 +143,13 @@ async def process_task(task: dict, config: dict, agent_name: str):
     docs_dir = Path(project_path) / "docs"
     docs_dir.mkdir(parents=True, exist_ok=True)
     (docs_dir / "task.md").write_text(
-        f"# Задача: {task['name']}\n\n"
-        f"- ID: {task_id}\n"
-        f"- Проект: {task.get('project_name', project_api)}\n"
-        f"- Ветка: {branch}\n",
+        f"Задача: {task['name']}\n\n",
         encoding="utf-8",
     )
 
     # Создаём AI с указанием path и выполняем задание
     ai = AI(build_software_engineer(path=project_path))
-    answer = await ai.send("Выполни задание из docs/task.md")
-    logger.info("AI ответ (задача #%s): %s", task_id, answer[:1000])
+    answer = await ai.send("Изучи проект и выполни задание из docs/task.md")
 
     # Коммит (с датой из get_commit_date, если есть в PATH) и push
     run_git(project_path, "add", "-A")
@@ -163,9 +159,9 @@ async def process_task(task: dict, config: dict, agent_name: str):
     if commit_date:
         env["GIT_AUTHOR_DATE"] = commit_date
         env["GIT_COMMITTER_DATE"] = commit_date
-    run_git(project_path, "commit", "-m", f"Task #{task_id}: {task['name']}", env=env)
+    run_git(project_path, "commit", "-m", f"Task {task['name']}", env=env)
     run_git(project_path, "push")
-    logger.info("Задача #%s закоммичена и запушена", task_id)
+    logger.info("Задача %s закоммичена и запушена", task['name'])
 
 
 async def run_foreground():
@@ -184,14 +180,14 @@ async def run_foreground():
             for task in tasks:
                 started = await server.task_start(task["id"], agent_name)
                 if not started.get("ok"):
-                    logger.info("Задача #%s уже взята другим воркером", task["id"])
+                    logger.info("Задача %s уже взята другим воркером", task["name"])
                     continue
                 try:
                     await process_task(task, config, agent_name)
                     await server.task_done(task["id"], agent_name)
-                    logger.info("Задача #%s выполнена", task["id"])
+                    logger.info("Задача %s выполнена", task["name"])
                 except Exception as e:
-                    logger.exception("Ошибка при выполнении задачи #%s", task["id"])
+                    logger.exception("Ошибка при выполнении задачи %s", task["name"])
                     try:
                         await server.task_error(task["id"], agent_name, str(e))
                     except Exception:
