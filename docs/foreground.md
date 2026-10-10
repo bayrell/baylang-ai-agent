@@ -24,6 +24,18 @@ php -S 0.0.0.0:8080 -t server
 Список задач с фильтрами (статус, агент, проект, название), пагинация,
 CRUD задач/проектов/агентов — всё через AJAX без перезагрузки, адаптировано под мобильные.
 
+### API
+
+- `GET  api.php?action=tasks` — задачи (фильтры: `status`, `agent_id`, `project_id`, `name`, `page`, `per_page`)
+- `POST api.php?action=task_save` — создать/обновить задачу
+- `POST api.php?action=task_delete` — удалить задачу
+- `GET  api.php?action=projects|agents` — списки, `POST .../project_save|agent_save|..._delete`
+- `GET  api.php?action=plan&agent=<api_name>` — запланированные задачи агента
+- `POST api.php?action=task_start|task_done|task_error` — статусы для агента
+
+Статусы задач: `draft` (Черновик), `planned` (Запланирован), `running` (Выполняется),
+`done` (Выполнен), `error` (Ошибка).
+
 ## Клиент
 
 Конфигурация в `~/.baylang/config.json`:
@@ -65,3 +77,10 @@ docker run --env-file .env -v /data/projects:/data/projects baylang-agent
 
 В контейнере создаётся пользователь `user` (id 1000, домашняя папка `/data/home`),
 foreground запускается автоматически.
+
+## Итог
+
+Реализована минимальная, но полная система foreground-задач: PHP-сервер с SQLite,
+AJAX-интерфейс с фильтрами и пагинацией, Python-клиент с циклом выполнения задач через AI,
+Docker-контейнер и ротируемое логирование. Каждый агент получает только свои задачи,
+а сервер хранит статусы и ошибки выполнения.
