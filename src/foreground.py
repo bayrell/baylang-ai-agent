@@ -206,6 +206,7 @@ async def run_foreground():
             except httpx.TimeoutException:
                 logger.warning("Таймаут подключения к серверу")
 
+            # Берём только одну задачу за цикл: после обработки выходим из перебора
             for task in tasks:
                 started = await server.task_start(task["id"], agent_name)
                 if not started.get("ok"):
@@ -221,6 +222,7 @@ async def run_foreground():
                         await server.task_error(task["id"], agent_name, str(e))
                     except Exception:
                         logger.exception("Не удалось отправить ошибку на сервер")
+                break
         except Exception:
             logger.exception("Ошибка цикла foreground")
 
