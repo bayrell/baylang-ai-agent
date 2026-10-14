@@ -18,7 +18,7 @@ def parse_args():
     parser.add_argument(
         "--foreground",
         action="store_true",
-        help="Запуск foreground-системы выполнения задач с сервера",
+        help="Запуск foreground выполнения задач с сервера",
     )
     return parser.parse_args()
 

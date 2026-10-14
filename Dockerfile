@@ -9,6 +9,7 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+COPY README.md ./
 COPY src/ ./
 
 # Пользователь user (id 1000), домашняя папка /data/home
