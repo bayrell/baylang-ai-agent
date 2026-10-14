@@ -31,6 +31,7 @@ CRUD задач/проектов/агентов — всё через AJAX бе�
 ```json
 {
   "server": "http://localhost:8080",
+  "login": "admin",
   "password": "admin",
   "agent": "agent-1",
   "projects": {
@@ -41,6 +42,18 @@ CRUD задач/проектов/агентов — всё через AJAX бе�
 
 - `agent` — api name агента на сервере
 - `projects` — соответствие api name проекта и локального пути
+
+### Переменные окружения
+
+| Переменная | Обязательна | Описание |
+|---|---|---|
+| `OPENROUTER_API_KEY` | да | API-ключ [OpenRouter](https://openrouter.ai/) для доступа к моделям |
+| `OPENROUTER_MODEL` | да | Используемая модель, например `openrouter/auto` |
+| `OPENROUTER_PROVIDERS` | нет | Список разрешённых провайдеров через запятую |
+| `TZ` | нет | Часовой пояс, например `Asia/Almaty` |
+
+Переменные можно задать через `--env`, `--env-file .env` или файл `.env`
+в рабочей папке (подхватывается автоматически через `python-dotenv`).
 
 Запуск:
 
@@ -58,10 +71,30 @@ CRUD задач/проектов/агентов — всё через AJAX бе�
 
 ### Docker
 
+Сборка образа `bayrell/baylang-ai-agent:1.0.0`:
+
 ```bash
-docker build -t baylang-agent .
-docker run --env-file .env -v /data/projects:/data/projects baylang-agent
+./build.sh docker
 ```
+
+Пересоздание контейнера:
+
+```bash
+docker stop baylang_agent
+docker rm baylang_agent
+
+docker run -d \
+    --env OPENROUTER_API_KEY="" \
+    --env OPENROUTER_MODEL="openrouter/auto" \
+    --env TZ="Asia/Almaty" \
+    --name baylang_agent \
+    -v ./baylang:/data/home \
+    -v ./project:/data/home/project \
+    bayrell/baylang-ai-agent:1.0.0
+```
+
+- `./baylang:/data/home` — домашняя папка (конфиг `config.json`, логи, история)
+- `./project:/data/home/project` — проекты для выполнения задач
 
 В контейнере создаётся пользователь `user` (id 1000, домашняя папка `/data/home`),
 foreground запускается автоматически.
