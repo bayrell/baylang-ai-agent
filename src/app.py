@@ -1,6 +1,7 @@
 import os
 import json
 import time
+from datetime import datetime
 from pathlib import Path
 
 from pydantic_core import to_jsonable_python
@@ -111,10 +112,11 @@ class AI:
         self.id = str(int(time.time()))
         self.file_name = str(HISTORY_DIR / f"{self.id}.json")
 
-        # системный промпт из ~/.baylang/prompt.txt
+        # системный промпт из ~/.baylang/prompt.txt + текущая дата и время
         prompt = load_prompt()
-        if prompt:
-            self.add_prompt(prompt)
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        prompt = f"{prompt}\n\nТекущая дата и время: {now}".strip()
+        self.add_prompt(prompt)
 
     # --- persistence -------------------------------------------------
 
