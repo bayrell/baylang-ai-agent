@@ -106,12 +106,41 @@ def scan_projects_dir(path: str) -> dict:
     return projects
 
 
+def reload_projects(config: dict) -> bool:
+    """Перечитывает проекты из env: BAYLANG_PROJECTS либо BAYLANG_PROJECTS_DIR.
+
+    BAYLANG_PROJECTS (явный словарь) имеет приоритет над BAYLANG_PROJECTS_DIR.
+    Папка с проектами пересканируется — новые проекты могут появиться,
+    пока демон работает. Возвращает True, если конфиг изменился.
+    """
+    projects = os.getenv("BAYLANG_PROJECTS")
+    if projects:
+        try:
+            config["projects"] = parse_projects(projects)
+            return True
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error("BAYLANG_PROJECTS задан некорректно (%s) — используются проекты из config.json", e)
+            return False
+
+    projects_dir = os.getenv("BAYLANG_PROJECTS_DIR")
+    if projects_dir:
+        if Path(projects_dir).is_dir():
+            scanned = scan_projects_dir(projects_dir)
+            changed = scanned != config.get("projects")
+            config["projects"] = scanned
+            if changed:
+                logger.info("Проекты из папки %s: %s", projects_dir, ", ".join(scanned) or "нет")
+            return changed
+        logger.warning("BAYLANG_PROJECTS_DIR=%r не существует, используется config.json", projects_dir)
+
+    return False
+
+
 def apply_env_config(config: dict) -> bool:
     """Перекрывает config.json переменными окружения BAYLANG_*.
 
     Если переменная установлена и не пустая — её значение имеет приоритет
-    над config.json. Проекты: BAYLANG_PROJECTS (явный словарь) либо
-    BAYLANG_PROJECTS_DIR (папка с проектами, имя папки = api name).
+    над config.json. Проекты обновляются через reload_projects.
     Возвращает True, если конфиг изменился.
     """
     changed = False
@@ -126,24 +155,7 @@ def apply_env_config(config: dict) -> bool:
             config[key] = value
             changed = True
 
-    projects = os.getenv("BAYLANG_PROJECTS")
-    if projects:
-        try:
-            config["projects"] = parse_projects(projects)
-            changed = True
-        except (json.JSONDecodeError, ValueError) as e:
-            logger.error("BAYLANG_PROJECTS задан некорректно (%s) — используются проекты из config.json", e)
-    else:
-        projects_dir = os.getenv("BAYLANG_PROJECTS_DIR")
-        if projects_dir:
-            if Path(projects_dir).is_dir():
-                config["projects"] = scan_projects_dir(projects_dir)
-                changed = True
-                logger.info("Проекты из папки %s: %s", projects_dir, ", ".join(config["projects"]) or "нет")
-            else:
-                logger.warning("BAYLANG_PROJECTS_DIR=%r не существует, используется config.json", projects_dir)
-
-    return changed
+    return reload_projects(config) or changed
 
 
 def load_config() -> dict:
@@ -377,6 +389,8 @@ async def run_foreground():
                         logger.info("Задача %s уже взята другим воркером", task["name"])
                         continue
                     try:
+                        # Перечитываем проекты: в BAYLANG_PROJECTS_DIR могли появиться новые папки
+                        reload_projects(config)
                         await process_task(task, config, agent_name)
                         await server.task_done(task["id"], agent_name)
                         logger.info("Задача %s выполнена", task["name"])

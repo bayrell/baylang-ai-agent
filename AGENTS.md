@@ -97,7 +97,9 @@ docker run -d \
 ## Workflow задачи (foreground, `src/foreground.py`)
 
 1. Каждые `POLL_INTERVAL` секунд (env, по умолчанию 300) запрашивает у сервера задачи со статусом `planned`
-2. `task_start` → чистка грязного дерева (`reset --hard` + `clean -fd`, если есть
+2. `task_start` → перечитывание проектов (`reload_projects`: если установлена
+   `BAYLANG_PROJECTS_DIR`, папка сканируется заново — новые проекты подхватываются
+   без перезапуска) → чистка грязного дерева (`reset --hard` + `clean -fd`, если есть
    изменения предыдущей задачи) → `git fetch` → `git checkout <ветка>` →
    `git pull --ff-only` (ветка из задачи, иначе ветка по умолчанию проекта
    `projects.branch`, иначе `main`)
