@@ -93,11 +93,26 @@ def parse_projects(value: str) -> dict:
     return projects
 
 
+def scan_projects_dir(path: str) -> dict:
+    """Собирает проекты из папки: имя вложенной папки — это api name проекта.
+
+    Путь задаётся env BAYLANG_PROJECTS_DIR; сканируются только обычные папки
+    (скрытые вроде .git пропускаются).
+    """
+    projects = {}
+    for entry in sorted(Path(path).iterdir()):
+        if entry.is_dir() and not entry.name.startswith("."):
+            projects[entry.name] = str(entry)
+    return projects
+
+
 def apply_env_config(config: dict) -> bool:
     """Перекрывает config.json переменными окружения BAYLANG_*.
 
     Если переменная установлена и не пустая — её значение имеет приоритет
-    над config.json. Возвращает True, если конфиг изменился.
+    над config.json. Проекты: BAYLANG_PROJECTS (явный словарь) либо
+    BAYLANG_PROJECTS_DIR (папка с проектами, имя папки = api name).
+    Возвращает True, если конфиг изменился.
     """
     changed = False
     for key, env_name in (
@@ -115,6 +130,15 @@ def apply_env_config(config: dict) -> bool:
     if projects:
         config["projects"] = parse_projects(projects)
         changed = True
+    else:
+        projects_dir = os.getenv("BAYLANG_PROJECTS_DIR")
+        if projects_dir:
+            if Path(projects_dir).is_dir():
+                config["projects"] = scan_projects_dir(projects_dir)
+                changed = True
+                logger.info("Проекты из папки %s: %s", projects_dir, ", ".join(config["projects"]) or "нет")
+            else:
+                logger.warning("BAYLANG_PROJECTS_DIR=%r не существует, используется config.json", projects_dir)
 
     return changed
 

@@ -61,6 +61,7 @@ docker rm baylang_agent
 | `BAYLANG_PASSWORD` | нет | Пароль basic auth на сервере задач |
 | `BAYLANG_AGENT` | нет | Api name агента на сервере задач |
 | `BAYLANG_PROJECTS` | нет | Проекты: JSON `{"api_name": "/path"}` или `api_name=/path, ...` |
+| `BAYLANG_PROJECTS_DIR` | нет | Путь к папке с проектами: api name проекта — имя его папки (имеет приоритет над `config.json`, уступает `BAYLANG_PROJECTS`) |
 | `POLL_INTERVAL` | нет | Интервал опроса сервера в секундах, по умолчанию `300` |
 
 Переменные `BAYLANG_*` **перекрывают** значения из `config.json` только в памяти:

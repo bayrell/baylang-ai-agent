@@ -64,6 +64,9 @@ docker run -d \
 - `BAYLANG_AGENT` — (необяз.) api name агента, перекрывает `agent` в config.json
 - `BAYLANG_PROJECTS` — (необяз.) проекты в формате JSON `{"api_name": "/path"}` или
   `api_name=/path, ...`, перекрывает `projects` в config.json
+- `BAYLANG_PROJECTS_DIR` — (необяз.) путь к папке с проектами: api name проекта — имя его
+  папки, например `/data/home/project/baylang` → проект `baylang`; перекрывает `projects`
+  в config.json, но уступает `BAYLANG_PROJECTS`
 - `POLL_INTERVAL` — (необяз.) интервал опроса сервера в секундах, по умолчанию `300`
 
 Переменные `BAYLANG_*`, если установлены, перекрывают config.json только в памяти —
