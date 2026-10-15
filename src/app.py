@@ -17,6 +17,8 @@ from pydantic_ai import (
     UserPromptPart,
     TextPart,
     FunctionToolCallEvent,
+    ToolCallPart,
+    ToolDefinition,
 )
 from pydantic_ai.models.openrouter import (
     OpenRouterModel,
@@ -24,7 +26,7 @@ from pydantic_ai.models.openrouter import (
     OpenRouterProviderConfig,
 )
 from pydantic_ai.providers.openrouter import OpenRouterProvider
-from pydantic_ai.capabilities import AbstractCapability, LocalWorkspace, Hooks
+from pydantic_ai.capabilities import AbstractCapability, LocalWorkspace, Hooks, WrapModelRequestHandler, WrapToolExecuteHandler
 from pydantic_ai.toolsets import AgentToolset, FunctionToolset
 from pydantic_ai_harness import FileSystem, RepoContext, ClearToolResults
 
@@ -36,8 +38,25 @@ BAYLANG_DIR = Path.home() / ".baylang"
 HISTORY_DIR = BAYLANG_DIR / "history"
 PROMPT_FILE = BAYLANG_DIR / "prompt.txt"
 
-hooks = Hooks()
+@dataclass
+class ToolHandler(AbstractCapability[Any]):
+    async def wrap_tool_execute(
+        self,
+        ctx: RunContext[Any],
+        **kwargs
+    ) -> Any:
+        tool = kwargs["call"]
+        args = kwargs["args"]
+        handler = kwargs["handler"]
+        try:
+            result = await handler(args)
+        except Exception as e:
+            print(f"[ToolHandler] Ошибка в инструменте '{tool.tool_name}': {str(e)}")
+            return f"Error tool {tool.tool_name} {str(e)}"
+        return result
 
+
+hooks = Hooks()
 
 @hooks.on.event(FunctionToolCallEvent)
 async def event_tool(ctx: RunContext, event: FunctionToolCallEvent) -> None:
@@ -69,7 +88,7 @@ def build_agent(capabilities=None):
         ),
     )
 
-    capabilities.append(hooks)
+    capabilities.extend([hooks, ToolHandler()])
 
     agent = Agent(
         model,
@@ -178,7 +197,7 @@ def build_software_engineer(path=None, capabilities=None):
     
     capabilities.extend([
         LocalWorkspace(working_dir=path),
-        FileSystem(),
+        FileSystem(content_hashes=False),
         RepoContext(),
         GitDiffTools(path=path),
         ClearToolResults(
