@@ -1,1 +1,2 @@
-git config --global user.name и git config --global user.email устанавливать через env при запуске докер контейнера, если они есть. Возможно нужно создать файл run.sh, который будет настраивать и запускать main.py
+В контейнере ошибка bash: ssh-keygen: command not found
+Установить apt-get install openssh-client
