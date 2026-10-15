@@ -1,7 +1,7 @@
 # BayLang AI
 
-**BayLang AI** — система foreground-выполнения задач для AI-агентов. Сервер (PHP + SQLite)
-раздаёт задачи агентам, а клиент (Python) опрашивает сервер раз в `POLL_INTERVAL` секунд
+**BayLang AI** — система выполнения задач для AI-агентов. Сервер
+раздаёт задачи агентам, а клиент опрашивает сервер раз в `POLL_INTERVAL` секунд
 (по умолчанию 300) и выполняет задачи через AI (OpenRouter).
 
 Задачи проекта:
@@ -28,7 +28,7 @@ docker run -d \
     --env OPENROUTER_MODEL="openrouter/auto" \
     --env TZ="Asia/Almaty" \
     --env GIT_USER_NAME="BayLang Agent" \
-    --env GIT_USER_EMAIL="agent@baylang.local" \
+    --env GIT_USER_EMAIL="agent@baylang" \
     --name baylang_agent \
     -v ./baylang:/data/home \
     -v ./project:/data/home/project \
@@ -37,11 +37,6 @@ docker run -d \
 
 - `./baylang:/data/home` — домашняя папка (конфиг `config.json`, логи, история)
 - `./project:/data/home/project` — проекты для выполнения задач
-
-В контейнере создаётся пользователь `user` (id 1000, домашняя папка `/data/home`),
-foreground запускается автоматически. Точка входа — `src/run.sh`: при запуске он
-устанавливает `git config --global user.name` / `user.email` из переменных
-`GIT_USER_NAME` / `GIT_USER_EMAIL`, **если они заданы**, и затем запускает `main.py`.
 
 Пересоздание контейнера:
 

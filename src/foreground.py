@@ -174,29 +174,12 @@ def get_commit_date(prev_timestamp: int) -> str | None:
     return result.stdout.strip() or None
 
 
-def parse_commit_date(commit_date: str) -> datetime | None:
-    """Парсит дату коммита: unix timestamp или ISO 8601 (например 2026-02-10T12:00:00+06:00).
-
-    Наивное время считается локальным (как в git). Если распарсить не удалось — None.
-    """
-    try:
-        return datetime.fromtimestamp(int(commit_date)).astimezone()
-    except ValueError:
-        pass
-    try:
-        dt = datetime.fromisoformat(commit_date)
-    except ValueError:
-        logger.warning("Не удалось распарсить commit_date: %r", commit_date)
-        return None
-    return dt if dt.tzinfo else dt.astimezone()
-
-
 async def wait_commit_date(commit_date: str):
-    """Ждёт до времени commit_date перед push, чтобы коммит «из будущего» не ушёл раньше времени."""
-    dt = parse_commit_date(commit_date)
+    """Ждёт до времени commit_date перед push"""
+    dt = int(commit_date)
     if dt is None:
         return
-    delay = (dt - datetime.now().astimezone()).total_seconds()
+    delay = dt - datetime.now().timestamp()
     if delay <= 0:
         return
     logger.info("Ожидание до времени коммита %s (%d сек)", commit_date, int(delay))

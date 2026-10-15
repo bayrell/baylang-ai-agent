@@ -70,6 +70,7 @@ def build_agent(capabilities=None):
     agent = Agent(
         model,
         capabilities=capabilities,
+        retries=10
     )
 
     return agent

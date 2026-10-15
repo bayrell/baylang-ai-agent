@@ -1,0 +1,4 @@
+pydantic-ai>=2.50.0
+pydantic-ai-harness>=0.50.0
+python-dotenv>=1.0.0
+httpx>=0.28.0

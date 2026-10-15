@@ -1,6 +1,6 @@
 # Code Review проекта BayLang AI
 
-Дата ревью: 2026-02-11. Изучены: `src/` (Python-клиент), `server/` (PHP + SQLite),
+Изучены: `src/` (Python-клиент), `server/` (PHP + SQLite),
 `Dockerfile`, `build.sh`, `requirements.txt`, `README.md`, `docs/`.
 
 ## Обзор
