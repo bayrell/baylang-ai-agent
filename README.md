@@ -1,25 +1,25 @@
 # BayLang AI
 
-**BayLang AI** — система выполнения задач для AI-агентов. Сервер
-раздаёт задачи агентам, а клиент опрашивает сервер раз в `POLL_INTERVAL` секунд
-(по умолчанию 300) и выполняет задачи через AI (OpenRouter).
+**BayLang AI** — a task execution system for AI agents. The server
+distributes tasks to agents, while the client polls the server every
+`POLL_INTERVAL` seconds (default: 300) and executes tasks through AI (OpenRouter).
 
-Задачи проекта:
+Project goals:
 
-- **Распределять задачи** между агентами: планирование, статусы, назначение на агента и проект
-- **Автоматически выполнять задачи через AI**: `git pull` → копирование задачи в `docs/task.md`
-  → выполнение → коммит → `push` → отчёт на сервер
-- **Предоставлять веб-интерфейс** для управления задачами, проектами и агентами (AJAX, адаптирован под мобильные)
+- **Distribute tasks** among agents: planning, statuses, assignment to an agent and project
+- **Automatically execute tasks via AI**: `git pull` → copy the task into `docs/task.md`
+  → execution → commit → `push` → report back to the server
+- **Provide a web interface** for managing tasks, projects and agents (AJAX, mobile-friendly)
 
-## Запуск Docker-контейнера
+## Running the Docker container
 
-Сборка образа `bayrell/baylang-ai-agent:1.0.0`:
+Building the image `bayrell/baylang-ai-agent:1.0.0`:
 
 ```bash
 ./build.sh docker
 ```
 
-Запуск контейнера:
+Running the container:
 
 ```bash
 docker run -d \
@@ -35,62 +35,63 @@ docker run -d \
     bayrell/baylang-ai-agent:1.0.0
 ```
 
-- `./baylang:/data/home` — домашняя папка (конфиг `config.json`, логи, история)
-- `./project:/data/home/project` — проекты для выполнения задач
+- `./baylang:/data/home` — home folder (config `config.json`, logs, history)
+- `./project:/data/home/project` — projects for task execution
 
-Пересоздание контейнера:
+Recreating the container:
 
 ```bash
 docker stop baylang_agent
 docker rm baylang_agent
-# затем docker run ... (см. выше)
+# then docker run ... (see above)
 ```
 
-## Переменные окружения
+## Environment variables
 
-| Переменная | Обязательна | Описание |
+| Variable | Required | Description |
 |---|---|---|
-| `OPENROUTER_API_KEY` | да | API-ключ [OpenRouter](https://openrouter.ai/) для доступа к моделям |
-| `OPENROUTER_MODEL` | да | Используемая модель, например `openrouter/auto` |
-| `OPENROUTER_PROVIDERS` | нет | Список разрешённых провайдеров через запятую |
-| `TZ` | нет | Часовой пояс, например `Asia/Almaty` |
-| `GIT_USER_NAME` | нет | `git config --global user.name` для коммитов агента |
-| `GIT_USER_EMAIL` | нет | `git config --global user.email` для коммитов агента |
-| `BAYLANG_SERVER` | нет | URL сервера задач, например `http://localhost:8080` |
-| `BAYLANG_LOGIN` | нет | Логин basic auth на сервере задач |
-| `BAYLANG_PASSWORD` | нет | Пароль basic auth на сервере задач |
-| `BAYLANG_AGENT` | нет | Api name агента на сервере задач |
-| `BAYLANG_PROJECTS` | нет | Проекты: JSON `{"api_name": "/path"}` или `api_name=/path, ...` |
-| `BAYLANG_PROJECTS_DIR` | нет | Путь к папке с проектами: api name проекта — имя его папки (имеет приоритет над `config.json`, уступает `BAYLANG_PROJECTS`) |
-| `POLL_INTERVAL` | нет | Интервал опроса сервера в секундах, по умолчанию `300` |
+| `OPENROUTER_API_KEY` | yes | API key for [OpenRouter](https://openrouter.ai/) to access the models |
+| `OPENROUTER_MODEL` | yes | The model to use, e.g. `openrouter/auto` |
+| `OPENROUTER_PROVIDERS` | no | Comma-separated list of allowed providers |
+| `TZ` | no | Time zone, e.g. `Asia/Almaty` |
+| `GIT_USER_NAME` | no | `git config --global user.name` for agent commits |
+| `GIT_USER_EMAIL` | no | `git config --global user.email` for agent commits |
+| `BAYLANG_SERVER` | no | URL of the task server, e.g. `http://localhost:8080` |
+| `BAYLANG_LOGIN` | no | Basic auth login for the task server |
+| `BAYLANG_PASSWORD` | no | Basic auth password for the task server |
+| `BAYLANG_AGENT` | no | Api name of the agent on the task server |
+| `BAYLANG_PROJECTS` | no | Projects: JSON `{"api_name": "/path"}` or `api_name=/path, ...` |
+| `BAYLANG_PROJECTS_DIR` | no | Path to the projects folder: the api name of a project is its folder name (takes precedence over `config.json`, but yields to `BAYLANG_PROJECTS`) |
+| `POLL_INTERVAL` | no | Server polling interval in seconds, default `300` |
 
-Переменные `BAYLANG_*` **перекрывают** значения из `config.json` только в памяти:
-файл `~/.baylang/config.json` при этом не изменяется.
+The `BAYLANG_*` variables **override** values from `config.json` in memory only:
+the file `~/.baylang/config.json` is not modified.
 
-Переменные можно задать через `--env`, `--env-file .env` или файл `.env`
-в рабочей папке (подхватывается автоматически через `python-dotenv`).
+Variables can be set via `--env`, `--env-file .env`, or a `.env` file in the
+working folder (picked up automatically via `python-dotenv`).
 
-## Конфигурация
+## Configuration
 
-### Сервер
+### Server
 
-Конфигурация в `server/config.php` (пароль для basic auth, путь к SQLite).
-База данных создаётся автоматически. Даты хранятся в UTC формате `y-m-d h:i:s`;
-в интерфейсе время отображается в часовом поясе пользователя и конвертируется в UTC при сохранении.
+Configuration lives in `server/config.php` (basic auth password, path to SQLite).
+The database is created automatically. Dates are stored in UTC with the format
+`y-m-d h:i:s`; in the UI, time is displayed in the user's time zone and converted
+back to UTC on save.
 
-Запуск (для разработки):
+Running (for development):
 
 ```bash
 php -S 0.0.0.0:8080 -t server
 ```
 
-Интерфейс: `http://localhost:8080/` (basic auth, пароль из config.php).
-Список задач с фильтрами (статус, агент, проект, название), пагинация,
-CRUD задач/проектов/агентов — всё через AJAX без перезагрузки, адаптировано под мобильные.
+UI: `http://localhost:8080/` (basic auth, password from config.php).
+Task list with filters (status, agent, project, title), pagination,
+CRUD for tasks/projects/agents — all via AJAX without page reloads, mobile-friendly.
 
-### Клиент
+### Client
 
-Конфигурация в `~/.baylang/config.json`:
+Configuration lives in `~/.baylang/config.json`:
 
 ```json
 {
@@ -104,26 +105,26 @@ CRUD задач/проектов/агентов — всё через AJAX бе�
 }
 ```
 
-- `agent` — api name агента на сервере
-- `projects` — соответствие api name проекта и локальному пути
+- `agent` — api name of the agent on the server
+- `projects` — mapping of project api name to a local path
 
-Запуск (из папки проекта):
+Running (from the project folder):
 
 ```bash
-./src/main.py --foreground   # цикл foreground (опрос сервера каждые POLL_INTERVAL сек, по умолчанию 300)
-./src/main.py                # интерактивный режим
+./src/main.py --foreground   # foreground loop (polls the server every POLL_INTERVAL sec, default 300)
+./src/main.py                # interactive mode
 ```
 
-Цикл foreground: получает запланированные задачи → `git pull` + переключение на ветку →
-копирует задачу в `docs/task.md` → выполняет через AI → коммит (дата коммита берётся из
-`get_commit_date <timestamp прошлого коммита>`, если команда есть в PATH) → `push` →
-сообщает серверу. Ошибки отправляются на сервер со статусом `error`.
+Foreground loop: fetches planned tasks → `git pull` + branch switch →
+copies the task into `docs/task.md` → executes it via AI → commit (the commit date
+is taken from `get_commit_date <previous commit timestamp>`, if the command is in
+PATH) → `push` → reports to the server. Errors are sent to the server with status `error`.
 
-Логи: `~/.baylang/logs/foreground.log` с ротацией, дублируются в stdout (docker).
+Logs: `~/.baylang/logs/foreground.log` with rotation, also mirrored to stdout (docker).
 
-## Структура проекта
+## Project structure
 
-- `server/` — сервер задач (PHP): `api.php`, `index.php`, `config.php`, `main.css`, `main.js`
-- `src/` — AI-клиент: `main.py`, `app.py`, `foreground.py`, `run.sh`
-- `Dockerfile` — контейнер клиента (foreground)
-- `build.sh` — сборка docker-образа (`./build.sh docker`)
+- `server/` — task server (PHP): `api.php`, `index.php`, `config.php`, `main.css`, `main.js`
+- `src/` — AI client: `main.py`, `app.py`, `foreground.py`, `run.sh`
+- `Dockerfile` — client container (foreground)
+- `build.sh` — docker image build (`./build.sh docker`)
