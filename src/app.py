@@ -1,8 +1,11 @@
 import os
 import json
+import subprocess
 import time
+from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from pydantic_core import to_jsonable_python
 from pydantic_ai import (
@@ -21,7 +24,8 @@ from pydantic_ai.models.openrouter import (
     OpenRouterProviderConfig,
 )
 from pydantic_ai.providers.openrouter import OpenRouterProvider
-from pydantic_ai.capabilities import LocalWorkspace, Hooks
+from pydantic_ai.capabilities import AbstractCapability, LocalWorkspace, Hooks
+from pydantic_ai.toolsets import AgentToolset, FunctionToolset
 from pydantic_ai_harness import FileSystem, RepoContext, ClearToolResults
 
 
@@ -76,6 +80,95 @@ def build_agent(capabilities=None):
     return agent
 
 
+GIT_DIFF_MAX_CHARS = 50_000
+
+
+def detect_base_branch(path: str) -> str | None:
+    """Ищет базовую ветку для сравнения: main, master, origin/main, origin/master."""
+    for ref in ("main", "master", "origin/main", "origin/master"):
+        try:
+            result = subprocess.run(
+                ["git", "rev-parse", "--verify", "--quiet", ref],
+                cwd=path,
+                capture_output=True,
+                timeout=10,
+            )
+        except (subprocess.TimeoutExpired, OSError):
+            continue
+        if result.returncode == 0:
+            return ref
+    return None
+
+
+def build_git_diff_toolset(path: str) -> FunctionToolset:
+    """Toolset с инструментом git diff: изменения ветки относительно main/master."""
+    toolset = FunctionToolset()
+
+    @toolset.tool_plain
+    def git_diff(base: str = "") -> str:
+        """git diff текущей ветки относительно main (или master).
+
+        Показывает список изменений (файлы и строки) текущей фичи
+        по отношению к базовой ветке — полезно для code review.
+        base — базовая ветка для сравнения (по умолчанию main или master).
+        """
+        base = base.strip() or detect_base_branch(path)
+        if not base:
+            return "Базовая ветка (main/master) не найдена — сравнение невозможно"
+
+        env = os.environ.copy()
+        env["GIT_TERMINAL_PROMPT"] = "0"
+        try:
+            result = subprocess.run(
+                ["git", "diff", base],
+                cwd=path,
+                capture_output=True,
+                text=True,
+                env=env,
+                timeout=60,
+            )
+        except subprocess.TimeoutExpired:
+            return f"git diff {base}: превышено время ожидания"
+        if result.returncode != 0:
+            return f"git diff {base}: {result.stderr.strip()}"
+
+        out = result.stdout.strip()
+
+        # Новые (untracked) файлы git diff не показывает — добавляем их списком
+        try:
+            untracked = subprocess.run(
+                ["git", "ls-files", "--others", "--exclude-standard"],
+                cwd=path,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+        except subprocess.TimeoutExpired:
+            untracked = None
+        if untracked is not None and untracked.returncode == 0 and untracked.stdout.strip():
+            files = untracked.stdout.strip()
+            section = f"### Новые файлы (untracked):\n{files}"
+            out = f"{out}\n\n{section}" if out else section
+
+        if not out:
+            return f"Изменений относительно {base} нет"
+        if len(out) > GIT_DIFF_MAX_CHARS:
+            out = out[:GIT_DIFF_MAX_CHARS] + f"\n... (обрезано, всего символов: {len(out)})"
+        return out
+
+    return toolset
+
+
+@dataclass
+class GitDiffTools(AbstractCapability[Any]):
+    """Инструмент git diff: изменения текущей ветки относительно main/master."""
+
+    path: str = ""
+
+    def get_toolset(self) -> AgentToolset[Any] | None:
+        return build_git_diff_toolset(self.path or os.getcwd())
+
+
 def build_software_engineer(path=None, capabilities=None):
     if capabilities is None:
         capabilities = []
@@ -87,6 +180,7 @@ def build_software_engineer(path=None, capabilities=None):
         LocalWorkspace(working_dir=path),
         FileSystem(),
         RepoContext(),
+        GitDiffTools(path=path),
         ClearToolResults(
             keep_pairs=6,
             max_fraction=0.6,
