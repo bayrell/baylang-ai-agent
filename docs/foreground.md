@@ -43,6 +43,7 @@ CRUD задач/проектов/агентов — всё через AJAX бе�
 ```json
 {
   "server": "http://localhost:8080",
+  "login": "admin",
   "password": "admin",
   "agent": "agent-1",
   "projects": {

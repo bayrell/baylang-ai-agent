@@ -44,6 +44,7 @@ def setup_logging():
 
 DEFAULT_CONFIG = {
     "server": "http://localhost:8080",
+    "login": "admin",
     "password": "admin",
     "agent": "agent-1",
     "projects": {},
@@ -189,8 +190,10 @@ async def run_foreground():
     """Главный цикл foreground: раз в 5 минут запрашивает план с сервера."""
     setup_logging()
     config = load_config()
-    server = ServerClient(config["server"],
-        config["login"], config["password"]
+    server = ServerClient(
+        config["server"],
+        config.get("login", DEFAULT_CONFIG["login"]),
+        config.get("password", DEFAULT_CONFIG["password"]),
     )
     agent_name = config["agent"]
     logger.info("Foreground запущен. Агент: %s, сервер: %s", agent_name, config["server"])
