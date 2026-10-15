@@ -2,6 +2,7 @@ import os
 import json
 import subprocess
 import time
+import logging
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -17,8 +18,6 @@ from pydantic_ai import (
     UserPromptPart,
     TextPart,
     FunctionToolCallEvent,
-    ToolCallPart,
-    ToolDefinition,
 )
 from pydantic_ai.models.openrouter import (
     OpenRouterModel,
@@ -26,7 +25,7 @@ from pydantic_ai.models.openrouter import (
     OpenRouterProviderConfig,
 )
 from pydantic_ai.providers.openrouter import OpenRouterProvider
-from pydantic_ai.capabilities import AbstractCapability, LocalWorkspace, Hooks, WrapModelRequestHandler, WrapToolExecuteHandler
+from pydantic_ai.capabilities import AbstractCapability, LocalWorkspace, Hooks
 from pydantic_ai.toolsets import AgentToolset, FunctionToolset
 from pydantic_ai_harness import FileSystem, RepoContext, ClearToolResults
 
@@ -37,6 +36,8 @@ APP_TITLE = "BayLang AI"
 BAYLANG_DIR = Path.home() / ".baylang"
 HISTORY_DIR = BAYLANG_DIR / "history"
 PROMPT_FILE = BAYLANG_DIR / "prompt.txt"
+
+logger = logging.getLogger(__name__)
 
 @dataclass
 class ToolHandler(AbstractCapability[Any]):
@@ -51,7 +52,7 @@ class ToolHandler(AbstractCapability[Any]):
         try:
             result = await handler(args)
         except Exception as e:
-            print(f"[ToolHandler] Ошибка в инструменте '{tool.tool_name}': {str(e)}")
+            logger.warning(f"[ToolHandler] Ошибка в инструменте '%s': %s", tool.tool_name, str(e))
             return f"Error tool {tool.tool_name} {str(e)}"
         return result
 
