@@ -53,6 +53,14 @@ CRUD задач/проектов/агентов — всё через AJAX бе�
 | `TZ` | нет | Часовой пояс, например `Asia/Almaty` |
 | `GIT_USER_NAME` | нет | `git config --global user.name` для коммитов агента |
 | `GIT_USER_EMAIL` | нет | `git config --global user.email` для коммитов агента |
+| `BAYLANG_SERVER` | нет | URL сервера задач, например `http://localhost:8080` |
+| `BAYLANG_LOGIN` | нет | Логин basic auth на сервере задач |
+| `BAYLANG_PASSWORD` | нет | Пароль basic auth на сервере задач |
+| `BAYLANG_AGENT` | нет | Api name агента на сервере задач |
+| `BAYLANG_PROJECTS` | нет | Проекты: JSON `{"api_name": "/path"}` или `api_name=/path, ...` |
+
+Переменные `BAYLANG_*` **перекрывают** значения из `config.json`: если они установлены,
+обновлённый конфиг сохраняется обратно в `~/.baylang/config.json`.
 
 Переменные можно задать через `--env`, `--env-file .env` или файл `.env`
 в рабочей папке (подхватывается автоматически через `python-dotenv`).

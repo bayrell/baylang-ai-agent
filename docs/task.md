@@ -1,2 +1,1 @@
-В контейнере ошибка bash: ssh-keygen: command not found
-Установить apt-get install openssh-client
+Добавить env для login, password, server, agent name, список проектов. Если они установлены, то меняется config.json

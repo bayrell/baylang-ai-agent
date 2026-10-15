@@ -58,6 +58,15 @@ docker run -d \
 - `TZ` — часовой пояс, например `Asia/Almaty`
 - `GIT_USER_NAME` — (необяз.) `git config --global user.name` для коммитов
 - `GIT_USER_EMAIL` — (необяз.) `git config --global user.email` для коммитов
+- `BAYLANG_SERVER` — (необяз.) URL сервера задач, перекрывает `server` в config.json
+- `BAYLANG_LOGIN` — (необяз.) логин basic auth, перекрывает `login` в config.json
+- `BAYLANG_PASSWORD` — (необяз.) пароль basic auth, перекрывает `password` в config.json
+- `BAYLANG_AGENT` — (необяз.) api name агента, перекрывает `agent` в config.json
+- `BAYLANG_PROJECTS` — (необяз.) проекты в формате JSON `{"api_name": "/path"}` или
+  `api_name=/path, ...`, перекрывает `projects` в config.json
+
+Переменные `BAYLANG_*`, если установлены, перекрывают config.json: обновлённый конфиг
+сохраняется обратно в `~/.baylang/config.json` (см. `apply_env_config` в `src/foreground.py`).
 
 Переменные можно задать через `--env`, `--env-file .env` или файл `.env` в рабочей
 папке (читается автоматически через `python-dotenv` в `src/main.py`).

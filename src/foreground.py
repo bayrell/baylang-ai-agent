@@ -58,17 +58,68 @@ def save_config(config: dict):
         json.dump(config, f, ensure_ascii=False, indent=2)
 
 
+def parse_projects(value: str) -> dict:
+    """Парсит список проектов из env: JSON {"api_name": "/path"} или "api_name=/path, ...".
+
+    Формат с '=' удобнее задавать в docker run, JSON — в .env-файлах.
+    """
+    value = value.strip()
+    if value.startswith("{"):
+        return json.loads(value)
+    projects = {}
+    for item in value.split(","):
+        name, sep, path = item.partition("=")
+        if sep:
+            projects[name.strip()] = path.strip()
+    return projects
+
+
+def apply_env_config(config: dict) -> bool:
+    """Перекрывает config.json переменными окружения BAYLANG_*.
+
+    Если переменная установлена и не пустая — её значение имеет приоритет
+    над config.json. Возвращает True, если конфиг изменился.
+    """
+    changed = False
+    for key, env_name in (
+        ("server", "BAYLANG_SERVER"),
+        ("login", "BAYLANG_LOGIN"),
+        ("password", "BAYLANG_PASSWORD"),
+        ("agent", "BAYLANG_AGENT"),
+    ):
+        value = os.getenv(env_name)
+        if value:
+            config[key] = value
+            changed = True
+
+    projects = os.getenv("BAYLANG_PROJECTS")
+    if projects:
+        config["projects"] = parse_projects(projects)
+        changed = True
+
+    return changed
+
+
 def load_config() -> dict:
     """Читает ~/.baylang/config.json: сервер, авторизация, агент, проекты.
 
     Если файла нет — создаёт его с конфигом по умолчанию.
+    Если установлены переменные окружения BAYLANG_* — они перекрывают
+    config.json, и обновлённый конфиг сохраняется обратно в файл.
     """
     if not CONFIG_FILE.exists():
-        save_config(DEFAULT_CONFIG)
+        config = DEFAULT_CONFIG.copy()
+        save_config(config)
         logger.info("Создан конфиг по умолчанию: %s", CONFIG_FILE)
-        return DEFAULT_CONFIG.copy()
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    else:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            config = json.load(f)
+
+    if apply_env_config(config):
+        save_config(config)
+        logger.info("Конфиг обновлён из переменных окружения: %s", CONFIG_FILE)
+
+    return config
 
 
 class GitError(RuntimeError):
