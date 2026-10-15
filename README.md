@@ -96,6 +96,7 @@ docker stop baylang_agent
 docker rm baylang_agent
 
 docker run -d \
+    --restart unless-stopped \
     --env OPENROUTER_API_KEY="" \
     --env OPENROUTER_MODEL="openrouter/auto" \
     --env TZ="Asia/Almaty" \

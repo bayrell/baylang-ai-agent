@@ -1,1 +1,1 @@
-Если выполнялся get_commit_date то нужно ждать до времени commit_date перед загрузкой git
+Добавить в readme для докер контейнера restart unless-stopped
