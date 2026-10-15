@@ -6,7 +6,7 @@
 ## Структура
 
 - `server/` — сервер задач (PHP): `api.php`, `index.php`, `config.php`, `main.css`, `main.js`
-- `src/` — AI-клиент: `main.py`, `app.py`, `foreground.py`
+- `src/` — AI-клиент: `main.py`, `app.py`, `foreground.py`, `run.sh`
 - `Dockerfile` — контейнер клиента (foreground)
 
 ## Сервер
@@ -78,7 +78,9 @@ docker run --env-file .env -v /data/projects:/data/projects baylang-agent
 ```
 
 В контейнере создаётся пользователь `user` (id 1000, домашняя папка `/data/home`),
-foreground запускается автоматически.
+foreground запускается автоматически. Точка входа — `run.sh`: при запуске он устанавливает
+`git config --global user.name` / `user.email` из переменных `GIT_USER_NAME` /
+`GIT_USER_EMAIL`, **если они заданы**, и затем запускает `main.py --foreground`.
 
 ## Итог
 

@@ -14,7 +14,7 @@ AI выполняет → коммит → `push` → отчёт на серве
 - `server/` — сервер задач (PHP, без фреймворков): `api.php` (REST API), `index.php`
   (интерфейс), `config.php` (basic auth + путь к SQLite), `main.css`, `main.js`
 - `src/` — AI-клиент (Python): `main.py` (точка входа), `app.py` (агент и AI-обёртка),
-  `foreground.py` (цикл опроса сервера)
+  `foreground.py` (цикл опроса сервера), `run.sh` (настройка git из env и запуск `main.py`)
 - `Dockerfile` — контейнер клиента (foreground)
 - `build.sh` — сборка docker-образа (`./build.sh docker`)
 - `requirements.txt` — зависимости Python
@@ -42,6 +42,8 @@ docker run -d \
     --env OPENROUTER_API_KEY="" \
     --env OPENROUTER_MODEL="openrouter/auto" \
     --env TZ="Asia/Almaty" \
+    --env GIT_USER_NAME="BayLang Agent" \
+    --env GIT_USER_EMAIL="agent@baylang.local" \
     --name baylang_agent \
     -v ./baylang:/data/home \
     -v ./project:/data/home/project \
@@ -54,6 +56,8 @@ docker run -d \
 - `OPENROUTER_MODEL` — модель, например `openrouter/auto` (обязательна)
 - `OPENROUTER_PROVIDERS` — (необяз.) список разрешённых провайдеров через запятую
 - `TZ` — часовой пояс, например `Asia/Almaty`
+- `GIT_USER_NAME` — (необяз.) `git config --global user.name` для коммитов
+- `GIT_USER_EMAIL` — (необяз.) `git config --global user.email` для коммитов
 
 Переменные можно задать через `--env`, `--env-file .env` или файл `.env` в рабочей
 папке (читается автоматически через `python-dotenv` в `src/main.py`).

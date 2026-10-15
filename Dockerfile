@@ -11,12 +11,13 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY README.md ./
 COPY src/ ./
+RUN chmod +x run.sh
 
 # Пользователь user (id 1000), домашняя папка /data/home
+# git user.name/user.email задаются при запуске контейнера
+# через GIT_USER_NAME / GIT_USER_EMAIL (см. run.sh)
 RUN mkdir -p /data \
     && useradd -m -u 1000 -d /data/home -s /bin/bash user \
-    && git config --global user.name "BayLang Agent" \
-    && git config --global user.email "agent@baylang.local" \
     && chown -R user:user /data/home
 
 ENV HOME=/data/home
@@ -27,4 +28,5 @@ ENV PATH="/data/home/bin:${PATH}"
 USER user
 
 # Foreground: опрос сервера и выполнение задач
-CMD ["python", "/app/main.py", "--foreground"]
+# (run.sh настраивает git user из GIT_USER_NAME / GIT_USER_EMAIL, если заданы)
+CMD ["/app/run.sh", "--foreground"]

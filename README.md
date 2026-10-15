@@ -6,7 +6,7 @@
 ## Структура
 
 - `server/` — сервер задач (PHP): `api.php`, `index.php`, `config.php`, `main.css`, `main.js`
-- `src/` — AI-клиент: `main.py`, `app.py`, `foreground.py`
+- `src/` — AI-клиент: `main.py`, `app.py`, `foreground.py`, `run.sh`
 - `Dockerfile` — контейнер клиента (foreground)
 
 ## Сервер
@@ -51,6 +51,8 @@ CRUD задач/проектов/агентов — всё через AJAX бе�
 | `OPENROUTER_MODEL` | да | Используемая модель, например `openrouter/auto` |
 | `OPENROUTER_PROVIDERS` | нет | Список разрешённых провайдеров через запятую |
 | `TZ` | нет | Часовой пояс, например `Asia/Almaty` |
+| `GIT_USER_NAME` | нет | `git config --global user.name` для коммитов агента |
+| `GIT_USER_EMAIL` | нет | `git config --global user.email` для коммитов агента |
 
 Переменные можно задать через `--env`, `--env-file .env` или файл `.env`
 в рабочей папке (подхватывается автоматически через `python-dotenv`).
@@ -87,6 +89,8 @@ docker run -d \
     --env OPENROUTER_API_KEY="" \
     --env OPENROUTER_MODEL="openrouter/auto" \
     --env TZ="Asia/Almaty" \
+    --env GIT_USER_NAME="BayLang Agent" \
+    --env GIT_USER_EMAIL="agent@baylang.local" \
     --name baylang_agent \
     -v ./baylang:/data/home \
     -v ./project:/data/home/project \
@@ -97,4 +101,6 @@ docker run -d \
 - `./project:/data/home/project` — проекты для выполнения задач
 
 В контейнере создаётся пользователь `user` (id 1000, домашняя папка `/data/home`),
-foreground запускается автоматически.
+foreground запускается автоматически. Точка входа — `src/run.sh`: при запуске он
+устанавливает `git config --global user.name` / `user.email` из переменных
+`GIT_USER_NAME` / `GIT_USER_EMAIL`, **если они заданы**, и затем запускает `main.py`.
