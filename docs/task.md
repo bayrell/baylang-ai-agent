@@ -1,1 +1,1 @@
-Добавить env для login, password, server, agent name, список проектов. Если они установлены, то меняется config.json
+Добавить env POLL_INTERVAL

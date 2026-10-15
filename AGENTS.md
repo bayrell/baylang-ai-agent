@@ -5,8 +5,8 @@
 ## Обзор
 
 **BayLang AI** — система foreground-выполнения задач. Сервер (PHP + SQLite) раздаёт
-задачи агентам; клиент (Python) опрашивает сервер раз в 5 минут и выполняет задачи
-через AI (pydantic-ai + OpenRouter): `git pull` → копирует задачу в `docs/task.md` →
+задачи агентам; клиент (Python) опрашивает сервер раз в `POLL_INTERVAL` секунд (по
+умолчанию 300) и выполняет задачи через AI (pydantic-ai + OpenRouter): `git pull` → копирует задачу в `docs/task.md` →
 AI выполняет → коммит → `push` → отчёт на сервер.
 
 ## Структура проекта
@@ -64,6 +64,7 @@ docker run -d \
 - `BAYLANG_AGENT` — (необяз.) api name агента, перекрывает `agent` в config.json
 - `BAYLANG_PROJECTS` — (необяз.) проекты в формате JSON `{"api_name": "/path"}` или
   `api_name=/path, ...`, перекрывает `projects` в config.json
+- `POLL_INTERVAL` — (необяз.) интервал опроса сервера в секундах, по умолчанию `300`
 
 Переменные `BAYLANG_*`, если установлены, перекрывают config.json: обновлённый конфиг
 сохраняется обратно в `~/.baylang/config.json` (см. `apply_env_config` в `src/foreground.py`).
@@ -92,7 +93,7 @@ docker run -d \
 
 ## Workflow задачи (foreground, `src/foreground.py`)
 
-1. Каждые `POLL_INTERVAL` (300 сек) запрашивает у сервера задачи со статусом `planned`
+1. Каждые `POLL_INTERVAL` секунд (env, по умолчанию 300) запрашивает у сервера задачи со статусом `planned`
 2. `task_start` → `git pull` → `git checkout <ветка>` (ветка из задачи, иначе `main`)
 3. Содержимое задачи (`task.content`) записывается в `docs/task.md` проекта
 4. AI выполняет задание из `docs/task.md`

@@ -19,7 +19,25 @@ BAYLANG_DIR = Path.home() / ".baylang"
 CONFIG_FILE = BAYLANG_DIR / "config.json"
 LOG_DIR = BAYLANG_DIR / "logs"
 
-POLL_INTERVAL = 300  # 5 минут
+DEFAULT_POLL_INTERVAL = 300  # 5 минут
+
+
+def get_poll_interval() -> int:
+    """Интервал опроса сервера в секундах: env POLL_INTERVAL, иначе 300.
+
+    Некорректное или неположительное значение заменяется дефолтом,
+    чтобы цикл не завис в tight-loop при POLL_INTERVAL=0.
+    """
+    try:
+        interval = int(os.getenv("POLL_INTERVAL", ""))
+        if interval > 0:
+            return interval
+        logger.warning("POLL_INTERVAL=%d не положителен, используется %d", interval, DEFAULT_POLL_INTERVAL)
+    except ValueError:
+        if os.getenv("POLL_INTERVAL"):
+            logger.warning("POLL_INTERVAL=%r не число, используется %d",
+                           os.getenv("POLL_INTERVAL"), DEFAULT_POLL_INTERVAL)
+    return DEFAULT_POLL_INTERVAL
 
 
 def setup_logging():
@@ -238,7 +256,7 @@ async def process_task(task: dict, config: dict, agent_name: str):
 
 
 async def run_foreground():
-    """Главный цикл foreground: раз в 5 минут запрашивает план с сервера."""
+    """Главный цикл foreground: раз в POLL_INTERVAL секунд запрашивает план с сервера."""
     setup_logging()
     config = load_config()
     server = ServerClient(
@@ -247,7 +265,11 @@ async def run_foreground():
         config.get("password", DEFAULT_CONFIG["password"]),
     )
     agent_name = config["agent"]
-    logger.info("Foreground запущен. Агент: %s, сервер: %s", agent_name, config["server"])
+    poll_interval = get_poll_interval()
+    logger.info(
+        "Foreground запущен. Агент: %s, сервер: %s, интервал опроса: %d сек",
+        agent_name, config["server"], poll_interval,
+    )
 
     while True:
         try:
@@ -280,4 +302,4 @@ async def run_foreground():
         except Exception:
             logger.exception("Ошибка цикла foreground")
 
-        await asyncio.sleep(POLL_INTERVAL)
+        await asyncio.sleep(poll_interval)
