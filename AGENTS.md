@@ -98,7 +98,8 @@ docker run -d \
    по умолчанию проекта `projects.branch`, иначе `main`)
 3. Содержимое задачи (`task.content`) записывается в `docs/task.md` проекта
 4. AI выполняет задание из `docs/task.md`
-5. `git add -A` → коммит (дата берётся из `get_commit_date`, если команда в PATH) → `push`
+5. `git add -A` → коммит (дата берётся из `get_commit_date`, если команда в PATH; если дата
+   коммита в будущем — ожидание её наступления перед push) → `push`
 6. Отчёт на сервер: `task_done` либо `task_error`
 
 ## Конвенции
