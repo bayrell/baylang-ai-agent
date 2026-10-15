@@ -87,10 +87,10 @@ async function loadTasks() {
       <div class="task">
         <div class="task-main">
           <div class="task-title">${esc(t.name)}
-            <span class="badge st-${esc(t.status)}">${STATUSES[t.status] || esc(t.status)}</span>
+            📁 ${esc(t.project_name)}
           </div>
           <div class="task-meta">
-            📁 ${esc(t.project_name)} · 🤖 ${esc(t.agent_name)} ·
+            <span class="badge st-${esc(t.status)}">${STATUSES[t.status] || esc(t.status)}</span> · 🤖 ${esc(t.agent_name)} ·
             🌿 ${esc(t.branch || "—")} · 🕒 ${esc(t.execute_at || "сразу")}
           </div>
           ${t.status === "error" && t.error ? `<div class="task-error">⚠️ ${esc(t.error)}</div>` : ""}
