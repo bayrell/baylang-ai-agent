@@ -40,6 +40,38 @@ function esc(s) {
     ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+// ---------- Часовой пояс пользователя (интерфейс) ----------
+// На сервере всё хранится в UTC (y-m-d h:i:s), а здесь конвертируем
+// в местный пояс пользователя для показа и обратно — при сохранении.
+
+const TZ = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+
+// "YYYY-MM-DD HH:MM:SS" (UTC) -> локальная строка "YYYY-MM-DD HH:MM"
+function utcToLocal(utc) {
+  if (!utc) return "";
+  const d = new Date(utc.replace(" ", "T") + "Z");
+  if (isNaN(d)) return utc;
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}`;
+}
+
+// значение datetime-local (локальное) -> "YYYY-MM-DD HH:MM:SS" (UTC)
+function localToUtc(v) {
+  if (!v) return "";
+  const d = new Date(v);
+  if (isNaN(d)) return "";
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getUTCFullYear()}-${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}:${p(d.getUTCSeconds())}`;
+}
+
+// текущее смещение пояса в виде "+06:00"
+function tzOffset() {
+  const off = -new Date().getTimezoneOffset();
+  const sign = off >= 0 ? "+" : "-";
+  const a = Math.abs(off);
+  return `${sign}${String(Math.floor(a / 60)).padStart(2, "0")}:${String(a % 60).padStart(2, "0")}`;
+}
+
 function fillSelect(sel, items, emptyLabel) {
   const cur = sel.value;
   sel.innerHTML =
@@ -91,7 +123,7 @@ async function loadTasks() {
           </div>
           <div class="task-meta">
             <span class="badge st-${esc(t.status)}">${STATUSES[t.status] || esc(t.status)}</span> · 🤖 ${esc(t.agent_name)} ·
-            🌿 ${esc(t.branch || "—")} · 🕒 ${esc(t.execute_at || "сразу")}
+            🌿 ${esc(t.branch || "—")} · 🕒 ${esc(t.execute_at ? utcToLocal(t.execute_at) : "сразу")}
           </div>
           ${t.status === "error" && t.error ? `<div class="task-error">⚠️ ${esc(t.error)}</div>` : ""}
         </div>
@@ -117,7 +149,7 @@ function openTask(t = null) {
   f.agent_id.value = t?.agent_id ?? agents[0]?.id ?? "";
   f.branch.value = t?.branch ?? projectBranch(f.project_id.value);
   f.branch.dataset.def = projectBranch(f.project_id.value);
-  f.execute_at.value = t?.execute_at ? t.execute_at.slice(0, 16).replace(" ", "T") : "";
+  f.execute_at.value = t?.execute_at ? utcToLocal(t.execute_at).slice(0, 16).replace(" ", "T") : "";
   f.status.value = t?.status ?? "draft";
   f.content.value = t?.content ?? "";
   $("#task-dialog-title").textContent = t ? `Задача` : "Новая задача";
@@ -237,6 +269,11 @@ function bindItemDialog(opts) {
 // ---------- Инициализация ----------
 
 function init() {
+  // часовой пояс пользователя в шапке и подписи поля времени
+  const tzText = `${TZ} (UTC${tzOffset()})`;
+  $("#tz").textContent = `🕒 ${tzText}`;
+  $("#tz-label").textContent = tzText;
+
   // навигация по страницам (кнопки "назад", меню настроек, шестерёнка)
   document.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-view]");
@@ -295,7 +332,7 @@ function init() {
         project_id: f.project_id.value,
         agent_id: f.agent_id.value,
         branch: f.branch.value,
-        execute_at: f.execute_at.value,
+        execute_at: f.execute_at.value ? localToUtc(f.execute_at.value) : "",
         status: f.status.value,
         content: f.content.value,
       });

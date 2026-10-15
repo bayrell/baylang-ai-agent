@@ -106,7 +106,7 @@ docker run -d \
 
 - **Python 3.12**, pydantic-ai + pydantic-ai-harness; типы через pydantic
 - **PHP** — без фреймворков, basic auth через `check_auth()` в `server/config.php`
-- Даты в базе хранятся в **UTC**, формат `y-m-d h:i:s`
+- Даты в базе хранятся в **UTC**, формат `y-m-d h:i:s`; в интерфейсе время в часовом поясе пользователя (конвертация в `main.js`)
 - Интерфейс сервера — AJAX без перезагрузки, адаптирован под мобильные
 - Логи клиента: `~/.baylang/logs/foreground.log` с ротацией, дублируются в stdout (docker)
 
