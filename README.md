@@ -1,50 +1,57 @@
 # BayLang AI
 
-Система foreground-выполнения задач: сервер (PHP + SQLite) раздаёт задачи агентам,
-клиент (Python) опрашивает сервер раз в `POLL_INTERVAL` секунд (по умолчанию 300) и
-выполняет задачи через AI.
+**BayLang AI** — система foreground-выполнения задач для AI-агентов. Сервер (PHP + SQLite)
+раздаёт задачи агентам, а клиент (Python) опрашивает сервер раз в `POLL_INTERVAL` секунд
+(по умолчанию 300) и выполняет задачи через AI (OpenRouter).
 
-## Структура
+Задачи проекта:
 
-- `server/` — сервер задач (PHP): `api.php`, `index.php`, `config.php`, `main.css`, `main.js`
-- `src/` — AI-клиент: `main.py`, `app.py`, `foreground.py`, `run.sh`
-- `Dockerfile` — контейнер клиента (foreground)
+- **Распределять задачи** между агентами: планирование, статусы, назначение на агента и проект
+- **Автоматически выполнять задачи через AI**: `git pull` → копирование задачи в `docs/task.md`
+  → выполнение → коммит → `push` → отчёт на сервер
+- **Предоставлять веб-интерфейс** для управления задачами, проектами и агентами (AJAX, адаптирован под мобильные)
 
-## Сервер
+## Запуск Docker-контейнера
 
-Конфигурация в `server/config.php` (пароль для basic auth, путь к SQLite).
-База данных создаётся автоматически. Даты хранятся в UTC формате `y-m-d h:i:s`.
-
-Запуск (для разработки):
+Сборка образа `bayrell/baylang-ai-agent:1.0.0`:
 
 ```bash
-php -S 0.0.0.0:8080 -t server
+./build.sh docker
 ```
 
-Интерфейс: `http://localhost:8080/` (basic auth, пароль из config.php).
-Список задач с фильтрами (статус, агент, проект, название), пагинация,
-CRUD задач/проектов/агентов — всё через AJAX без перезагрузки, адаптировано под мобильные.
+Запуск контейнера:
 
-## Клиент
-
-Конфигурация в `~/.baylang/config.json`:
-
-```json
-{
-  "server": "http://localhost:8080",
-  "login": "admin",
-  "password": "admin",
-  "agent": "agent-1",
-  "projects": {
-    "baylang": "/data/projects/baylang"
-  }
-}
+```bash
+docker run -d \
+    --restart unless-stopped \
+    --env OPENROUTER_API_KEY="" \
+    --env OPENROUTER_MODEL="openrouter/auto" \
+    --env TZ="Asia/Almaty" \
+    --env GIT_USER_NAME="BayLang Agent" \
+    --env GIT_USER_EMAIL="agent@baylang.local" \
+    --name baylang_agent \
+    -v ./baylang:/data/home \
+    -v ./project:/data/home/project \
+    bayrell/baylang-ai-agent:1.0.0
 ```
 
-- `agent` — api name агента на сервере
-- `projects` — соответствие api name проекта и локального пути
+- `./baylang:/data/home` — домашняя папка (конфиг `config.json`, логи, история)
+- `./project:/data/home/project` — проекты для выполнения задач
 
-### Переменные окружения
+В контейнере создаётся пользователь `user` (id 1000, домашняя папка `/data/home`),
+foreground запускается автоматически. Точка входа — `src/run.sh`: при запуске он
+устанавливает `git config --global user.name` / `user.email` из переменных
+`GIT_USER_NAME` / `GIT_USER_EMAIL`, **если они заданы**, и затем запускает `main.py`.
+
+Пересоздание контейнера:
+
+```bash
+docker stop baylang_agent
+docker rm baylang_agent
+# затем docker run ... (см. выше)
+```
+
+## Переменные окружения
 
 | Переменная | Обязательна | Описание |
 |---|---|---|
@@ -67,7 +74,43 @@ CRUD задач/проектов/агентов — всё через AJAX бе�
 Переменные можно задать через `--env`, `--env-file .env` или файл `.env`
 в рабочей папке (подхватывается автоматически через `python-dotenv`).
 
-Запуск:
+## Конфигурация
+
+### Сервер
+
+Конфигурация в `server/config.php` (пароль для basic auth, путь к SQLite).
+База данных создаётся автоматически. Даты хранятся в UTC формате `y-m-d h:i:s`.
+
+Запуск (для разработки):
+
+```bash
+php -S 0.0.0.0:8080 -t server
+```
+
+Интерфейс: `http://localhost:8080/` (basic auth, пароль из config.php).
+Список задач с фильтрами (статус, агент, проект, название), пагинация,
+CRUD задач/проектов/агентов — всё через AJAX без перезагрузки, адаптировано под мобильные.
+
+### Клиент
+
+Конфигурация в `~/.baylang/config.json`:
+
+```json
+{
+  "server": "http://localhost:8080",
+  "login": "admin",
+  "password": "admin",
+  "agent": "agent-1",
+  "projects": {
+    "baylang": "/data/projects/baylang"
+  }
+}
+```
+
+- `agent` — api name агента на сервере
+- `projects` — соответствие api name проекта и локальному пути
+
+Запуск (из папки проекта):
 
 ```bash
 ./src/main.py --foreground   # цикл foreground (опрос сервера каждые POLL_INTERVAL сек, по умолчанию 300)
@@ -81,37 +124,9 @@ CRUD задач/проектов/агентов — всё через AJAX бе�
 
 Логи: `~/.baylang/logs/foreground.log` с ротацией, дублируются в stdout (docker).
 
-### Docker
+## Структура проекта
 
-Сборка образа `bayrell/baylang-ai-agent:1.0.0`:
-
-```bash
-./build.sh docker
-```
-
-Пересоздание контейнера:
-
-```bash
-docker stop baylang_agent
-docker rm baylang_agent
-
-docker run -d \
-    --restart unless-stopped \
-    --env OPENROUTER_API_KEY="" \
-    --env OPENROUTER_MODEL="openrouter/auto" \
-    --env TZ="Asia/Almaty" \
-    --env GIT_USER_NAME="BayLang Agent" \
-    --env GIT_USER_EMAIL="agent@baylang.local" \
-    --name baylang_agent \
-    -v ./baylang:/data/home \
-    -v ./project:/data/home/project \
-    bayrell/baylang-ai-agent:1.0.0
-```
-
-- `./baylang:/data/home` — домашняя папка (конфиг `config.json`, логи, история)
-- `./project:/data/home/project` — проекты для выполнения задач
-
-В контейнере создаётся пользователь `user` (id 1000, домашняя папка `/data/home`),
-foreground запускается автоматически. Точка входа — `src/run.sh`: при запуске он
-устанавливает `git config --global user.name` / `user.email` из переменных
-`GIT_USER_NAME` / `GIT_USER_EMAIL`, **если они заданы**, и затем запускает `main.py`.
+- `server/` — сервер задач (PHP): `api.php`, `index.php`, `config.php`, `main.css`, `main.js`
+- `src/` — AI-клиент: `main.py`, `app.py`, `foreground.py`, `run.sh`
+- `Dockerfile` — контейнер клиента (foreground)
+- `build.sh` — сборка docker-образа (`./build.sh docker`)
