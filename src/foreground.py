@@ -134,17 +134,6 @@ def load_config() -> dict:
         return json.load(f)
 
 
-def config_from_env(config: dict) -> dict:
-    """Обновляет значения config из переменных окружения BAYLANG_* без сохранения файла.
-
-    Если переменная установлена и не пустая — её значение имеет приоритет
-    над config.json. ~/.baylang/config.json при этом не изменяется.
-    """
-    if apply_env_config(config):
-        logger.info("Конфиг перекрыт из переменных окружения BAYLANG_*")
-    return config
-
-
 class GitError(RuntimeError):
     pass
 
@@ -279,7 +268,8 @@ async def process_task(task: dict, config: dict, agent_name: str):
 async def run_foreground():
     """Главный цикл foreground: раз в POLL_INTERVAL секунд запрашивает план с сервера."""
     setup_logging()
-    config = config_from_env(load_config())
+    config = load_config()
+    apply_env_config(config)
     server = ServerClient(
         config["server"],
         config.get("login", DEFAULT_CONFIG["login"]),

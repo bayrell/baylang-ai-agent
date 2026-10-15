@@ -19,6 +19,7 @@ from pydantic_ai import (
     TextPart,
     FunctionToolCallEvent,
 )
+from pydantic_ai.exceptions import ToolRetryError
 from pydantic_ai.models.openrouter import (
     OpenRouterModel,
     OpenRouterModelSettings,
@@ -51,6 +52,8 @@ class ToolHandler(AbstractCapability[Any]):
         handler = kwargs["handler"]
         try:
             result = await handler(args)
+        except ToolRetryError as e:
+            return f"Error tool {tool.tool_name} {str(e)}"
         except Exception as e:
             logger.warning(f"[ToolHandler] Ошибка в инструменте '%s': %s", tool.tool_name, str(e))
             return f"Error tool {tool.tool_name} {str(e)}"
