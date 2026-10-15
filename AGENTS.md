@@ -66,8 +66,8 @@ docker run -d \
   `api_name=/path, ...`, перекрывает `projects` в config.json
 - `POLL_INTERVAL` — (необяз.) интервал опроса сервера в секундах, по умолчанию `300`
 
-Переменные `BAYLANG_*`, если установлены, перекрывают config.json: обновлённый конфиг
-сохраняется обратно в `~/.baylang/config.json` (см. `apply_env_config` в `src/foreground.py`).
+Переменные `BAYLANG_*`, если установлены, перекрывают config.json только в памяти —
+файл `~/.baylang/config.json` не изменяется (см. `config_from_env` в `src/foreground.py`).
 
 Переменные можно задать через `--env`, `--env-file .env` или файл `.env` в рабочей
 папке (читается автоматически через `python-dotenv` в `src/main.py`).

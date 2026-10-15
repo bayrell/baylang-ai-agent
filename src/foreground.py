@@ -123,21 +123,25 @@ def load_config() -> dict:
     """Читает ~/.baylang/config.json: сервер, авторизация, агент, проекты.
 
     Если файла нет — создаёт его с конфигом по умолчанию.
-    Если установлены переменные окружения BAYLANG_* — они перекрывают
-    config.json, и обновлённый конфиг сохраняется обратно в файл.
     """
     if not CONFIG_FILE.exists():
         config = DEFAULT_CONFIG.copy()
         save_config(config)
         logger.info("Создан конфиг по умолчанию: %s", CONFIG_FILE)
-    else:
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            config = json.load(f)
+        return config
 
+    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def config_from_env(config: dict) -> dict:
+    """Обновляет значения config из переменных окружения BAYLANG_* без сохранения файла.
+
+    Если переменная установлена и не пустая — её значение имеет приоритет
+    над config.json. ~/.baylang/config.json при этом не изменяется.
+    """
     if apply_env_config(config):
-        save_config(config)
-        logger.info("Конфиг обновлён из переменных окружения: %s", CONFIG_FILE)
-
+        logger.info("Конфиг перекрыт из переменных окружения BAYLANG_*")
     return config
 
 
@@ -275,7 +279,7 @@ async def process_task(task: dict, config: dict, agent_name: str):
 async def run_foreground():
     """Главный цикл foreground: раз в POLL_INTERVAL секунд запрашивает план с сервера."""
     setup_logging()
-    config = load_config()
+    config = config_from_env(load_config())
     server = ServerClient(
         config["server"],
         config.get("login", DEFAULT_CONFIG["login"]),
