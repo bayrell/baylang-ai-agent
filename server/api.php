@@ -8,7 +8,7 @@
  * POST action=task_delete    — удалить задачу {id}
  *
  * GET  action=projects       — список проектов
- * POST action=project_save   — создать/обновить проект {id?, name, api_name}
+ * POST action=project_save   — создать/обновить проект {id?, name, api_name, branch}
  * POST action=project_delete — удалить проект {id}
  *
  * GET  action=agents         — список агентов
@@ -39,7 +39,8 @@ $db->exec('
 CREATE TABLE IF NOT EXISTS projects (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
-    api_name TEXT NOT NULL UNIQUE
+    api_name TEXT NOT NULL UNIQUE,
+    branch TEXT NOT NULL DEFAULT \'\'
 );
 CREATE TABLE IF NOT EXISTS agents (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -60,6 +61,12 @@ CREATE TABLE IF NOT EXISTS tasks (
     updated_at TEXT NOT NULL
 );
 ');
+
+// Миграция: добавляем projects.branch в существующие базы
+$cols = $db->query('PRAGMA table_info(projects)')->fetchAll();
+if (!array_filter($cols, fn($c) => $c['name'] === 'branch')) {
+    $db->exec("ALTER TABLE projects ADD COLUMN branch TEXT NOT NULL DEFAULT ''");
+}
 
 const STATUSES = ['draft', 'planned', 'running', 'done', 'error'];
 
@@ -171,14 +178,15 @@ try {
             $id = (int)($body['id'] ?? 0);
             $name = trim($body['name'] ?? '');
             $api_name = trim($body['api_name'] ?? '');
+            $branch = trim($body['branch'] ?? '');
             if ($name === '' || $api_name === '') {
                 http_response_code(400);
                 out(['error' => 'Обязательные поля: name, api_name']);
             }
             if ($id > 0) {
-                $db->prepare('UPDATE projects SET name=?, api_name=? WHERE id=?')->execute([$name, $api_name, $id]);
+                $db->prepare('UPDATE projects SET name=?, api_name=?, branch=? WHERE id=?')->execute([$name, $api_name, $branch, $id]);
             } else {
-                $db->prepare('INSERT INTO projects (name, api_name) VALUES (?,?)')->execute([$name, $api_name]);
+                $db->prepare('INSERT INTO projects (name, api_name, branch) VALUES (?,?,?)')->execute([$name, $api_name, $branch]);
                 $id = (int)$db->lastInsertId();
             }
             out(['id' => $id]);
@@ -236,7 +244,8 @@ try {
         case 'GET plan': {
             $agent = trim($_GET['agent'] ?? '');
             $stmt = $db->prepare("
-                SELECT t.*, p.api_name AS project_api_name, p.name AS project_name, ag.api_name AS agent_api_name
+                SELECT t.*, p.api_name AS project_api_name, p.name AS project_name,
+                       p.branch AS project_branch, ag.api_name AS agent_api_name
                 FROM tasks t
                 JOIN agents ag ON ag.id = t.agent_id
                 JOIN projects p ON p.id = t.project_id

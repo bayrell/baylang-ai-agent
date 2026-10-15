@@ -96,6 +96,7 @@ check_auth($config);
     <input type="hidden" name="id">
     <label>Название <input name="name" required></label>
     <label>API name <input name="api_name" required></label>
+    <label>Ветка по умолчанию <input name="branch" placeholder="main"></label>
     <div class="dialog-actions">
       <button type="button" id="project-cancel">Отмена</button>
       <button class="primary">Сохранить</button>

@@ -48,6 +48,11 @@ function fillSelect(sel, items, emptyLabel) {
   if ([...sel.options].some((o) => o.value === cur)) sel.value = cur;
 }
 
+// Ветка по умолчанию у выбранного проекта (или "")
+function projectBranch(id) {
+  return projects.find((p) => p.id == id)?.branch || "";
+}
+
 // ---------- Навигация (страницы) ----------
 
 function showView(name) {
@@ -110,7 +115,8 @@ function openTask(t = null) {
   f.name.value = t?.name ?? "";
   f.project_id.value = t?.project_id ?? projects[0]?.id ?? "";
   f.agent_id.value = t?.agent_id ?? agents[0]?.id ?? "";
-  f.branch.value = t?.branch ?? "";
+  f.branch.value = t?.branch ?? projectBranch(f.project_id.value);
+  f.branch.dataset.def = projectBranch(f.project_id.value);
   f.execute_at.value = t?.execute_at ? t.execute_at.slice(0, 16).replace(" ", "T") : "";
   f.status.value = t?.status ?? "draft";
   f.content.value = t?.content ?? "";
@@ -130,18 +136,19 @@ async function deleteTask(id) {
 
 // ---------- Проекты / Агенты (таблицы + диалоги) ----------
 
-function tableHtml(items, prefix) {
+function tableHtml(items, prefix, showBranch = false) {
   return items.length
     ? `
     <table class="data-table">
       <thead>
-        <tr><th>Название</th><th>API name</th><th class="col-actions">Действия</th></tr>
+        <tr><th>Название</th><th>API name</th>${showBranch ? "<th>Ветка</th>" : ""}<th class="col-actions">Действия</th></tr>
       </thead>
       <tbody>
         ${items.map((i) => `
         <tr>
           <td>${esc(i.name)}</td>
           <td><code>${esc(i.api_name)}</code></td>
+          ${showBranch ? `<td>🌿 ${esc(i.branch || "—")}</td>` : ""}
           <td class="col-actions">
             <button data-${prefix}-edit="${i.id}" title="Редактировать">✏️</button>
             <button data-${prefix}-del="${i.id}" title="Удалить">🗑</button>
@@ -158,7 +165,7 @@ async function loadProjects() {
   } catch (e) {
     projects = [];
   }
-  $("#projects").innerHTML = tableHtml(projects, "p");
+  $("#projects").innerHTML = tableHtml(projects, "p", true);
   fillSelect($("#f-project"), projects, "Все проекты");
   fillSelect($("#task-form").elements.project_id, projects, "");
 }
@@ -179,6 +186,7 @@ function openItemDialog(dialogSel, titleSel, item) {
   f.id.value = item?.id ?? "";
   f.name.value = item?.name ?? "";
   f.api_name.value = item?.api_name ?? "";
+  if (f.branch) f.branch.value = item?.branch ?? "";
   $(titleSel).textContent = item ? `${item.name}` : "Новый";
   $(dialogSel).showModal();
   f.name.focus();
@@ -197,6 +205,7 @@ function bindItemDialog(opts) {
         id: el.id.value || 0,
         name: el.name.value,
         api_name: el.api_name.value,
+        branch: el.branch?.value ?? "",
       });
       $(opts.dialog).close();
       opts.load();
@@ -264,6 +273,18 @@ function init() {
     if (b && !b.disabled) { page = +b.dataset.page; loadTasks(); }
   };
   $("#task-cancel").onclick = () => $("#task-dialog").close();
+
+  // ветка задачи: подставляем ветку по умолчанию выбранного проекта,
+  // если её не меняли вручную
+  const tf = $("#task-form").elements;
+  tf.project_id.onchange = () => {
+    const nb = projectBranch(tf.project_id.value);
+    if (!tf.branch.value.trim() || tf.branch.value === tf.branch.dataset.def) {
+      tf.branch.value = nb;
+    }
+    tf.branch.dataset.def = nb;
+  };
+
   $("#task-form").onsubmit = async (e) => {
     e.preventDefault();
     const f = e.target.elements;

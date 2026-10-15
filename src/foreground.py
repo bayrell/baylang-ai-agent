@@ -215,7 +215,8 @@ async def process_task(task: dict, config: dict, agent_name: str):
         raise RuntimeError(f"Проект '{project_api}' не найден в config.json")
 
     task_id = task["id"]
-    branch = task.get("branch") or "main"
+    # Ветка задачи, иначе ветка по умолчанию из настроек проекта, иначе main
+    branch = task.get("branch") or task.get("project_branch") or "main"
     logger.info(
         "Задача %s (проект %s, ветка %s)",
         task["name"], project_api, branch,
