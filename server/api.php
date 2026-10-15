@@ -34,6 +34,7 @@ $db = new PDO('sqlite:' . ($config['db'] ?? __DIR__ . '/data.sqlite'));
 $db->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 $db->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
 $db->exec('PRAGMA journal_mode=WAL');
+$db->exec('PRAGMA busy_timeout=5000');
 $db->exec('PRAGMA foreign_keys=ON');
 $db->exec('
 CREATE TABLE IF NOT EXISTS projects (
@@ -243,6 +244,7 @@ try {
 
         case 'GET plan': {
             $agent = trim($_GET['agent'] ?? '');
+            $limit = max(1, min(100, (int)($_GET['limit'] ?? 10)));
             $stmt = $db->prepare("
                 SELECT t.*, p.api_name AS project_api_name, p.name AS project_name,
                        p.branch AS project_branch, ag.api_name AS agent_api_name
@@ -252,8 +254,9 @@ try {
                 WHERE ag.api_name = ? AND t.status = 'planned'
                   AND (t.execute_at IS NULL OR t.execute_at <= ?)
                 ORDER BY t.id ASC
+                LIMIT ?
             ");
-            $stmt->execute([$agent, $now]);
+            $stmt->execute([$agent, $now, $limit]);
             out($stmt->fetchAll());
         }
 
@@ -296,6 +299,8 @@ try {
         }
     }
 } catch (PDOException $e) {
-    http_response_code(400);
-    out(['error' => $e->getMessage()]);
+    // Текст исключения не отдаём клиенту (раскрывает пути/структуру БД) — только в лог
+    error_log('[api.php] ' . $e->getMessage());
+    http_response_code(500);
+    out(['error' => 'Ошибка базы данных']);
 }

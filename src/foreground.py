@@ -128,8 +128,11 @@ def apply_env_config(config: dict) -> bool:
 
     projects = os.getenv("BAYLANG_PROJECTS")
     if projects:
-        config["projects"] = parse_projects(projects)
-        changed = True
+        try:
+            config["projects"] = parse_projects(projects)
+            changed = True
+        except (json.JSONDecodeError, ValueError) as e:
+            logger.error("BAYLANG_PROJECTS задан некорректно (%s) — используются проекты из config.json", e)
     else:
         projects_dir = os.getenv("BAYLANG_PROJECTS_DIR")
         if projects_dir:
@@ -154,8 +157,16 @@ def load_config() -> dict:
         logger.info("Создан конфиг по умолчанию: %s", CONFIG_FILE)
         return config
 
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            config = json.load(f)
+        if not isinstance(config, dict):
+            raise ValueError("ожидался JSON-объект")
+        return config
+    except (json.JSONDecodeError, ValueError, OSError) as e:
+        logger.error("Не удалось прочитать %s (%s) — используется конфиг по умолчанию",
+                     CONFIG_FILE, e)
+        return DEFAULT_CONFIG.copy()
 
 
 class GitError(RuntimeError):
@@ -163,13 +174,28 @@ class GitError(RuntimeError):
 
 
 def run_git(path: str, *args, env=None) -> str:
-    result = subprocess.run(
-        ["git", *args],
-        cwd=path,
-        capture_output=True,
-        text=True,
-        env=env,
-    )
+    """Выполняет git-команду с таймаутом и без интерактивных промптов.
+
+    GIT_TERMINAL_PROMPT=0 и GIT_SSH_COMMAND=BatchMode=yes не дают git
+    зависнуть, запрашивая креды (HTTPS-пароль, SSH-фразу); timeout — при
+    зависании сети.
+    """
+    run_env = os.environ.copy()
+    if env:
+        run_env.update(env)
+    run_env["GIT_TERMINAL_PROMPT"] = "0"
+    run_env["GIT_SSH_COMMAND"] = "ssh -o BatchMode=yes"
+    try:
+        result = subprocess.run(
+            ["git", *args],
+            cwd=path,
+            capture_output=True,
+            text=True,
+            env=run_env,
+            timeout=300,
+        )
+    except subprocess.TimeoutExpired:
+        raise GitError(f"git {' '.join(args)}: превышен таймаут 300 сек") from None
     if result.returncode != 0:
         raise GitError(f"git {' '.join(args)}: {result.stderr.strip()}")
     return result.stdout.strip()
@@ -191,10 +217,14 @@ def get_commit_date(prev_timestamp: int) -> str | None:
     return result.stdout.strip() or None
 
 
-async def wait_commit_date(commit_date: str):
-    """Ждёт до времени commit_date перед push"""
-    dt = int(commit_date)
-    if dt is None:
+async def wait_commit_date(commit_date: str | None):
+    """Ждёт до времени commit_date перед push (None/пусто — не ждёт)."""
+    if not commit_date:
+        return
+    try:
+        dt = int(commit_date)
+    except (TypeError, ValueError):
+        logger.warning("Некорректная дата коммита %r — ожидание пропущено", commit_date)
         return
     delay = dt - datetime.now().timestamp()
     if delay <= 0:
@@ -236,6 +266,10 @@ class ServerClient:
     async def task_error(self, task_id: int, agent: str, error: str):
         return await self._post("task_error", {"id": task_id, "agent": agent, "error": error})
 
+    async def close(self):
+        """Закрывает HTTP-клиент при остановке демона."""
+        await self.client.aclose()
+
 
 async def process_task(task: dict, config: dict, agent_name: str):
     """Полный цикл задачи: git pull -> ветка -> task.md -> AI -> commit -> push."""
@@ -252,15 +286,29 @@ async def process_task(task: dict, config: dict, agent_name: str):
         task["name"], project_api, branch,
     )
 
-    # Скачиваем проект и переключаемся на ветку
+    # Чистим дерево от предыдущей задачи (иначе её изменения вложатся в этот коммит)
     try:
-        run_git(project_path, "pull")
+        status = run_git(project_path, "status", "--porcelain")
     except GitError as e:
-        logger.warning("git pull не удался: %s", e)
+        raise RuntimeError(f"Не git-репозиторий или ошибка статуса: {e}") from e
+    if status:
+        logger.warning("Грязное дерево — сбрасываем изменения предыдущей задачи")
+        run_git(project_path, "reset", "--hard")
+        run_git(project_path, "clean", "-fd")
+
+    # fetch -> checkout целевой ветки -> pull --ff-only уже на этой ветке
+    try:
+        run_git(project_path, "fetch", "origin")
+    except GitError as e:
+        logger.warning("git fetch не удался: %s", e)
     try:
         run_git(project_path, "checkout", branch)
     except GitError:
         run_git(project_path, "checkout", "-B", branch)
+    try:
+        run_git(project_path, "pull", "--ff-only")
+    except GitError as e:
+        logger.warning("git pull --ff-only не удался: %s", e)
 
     # Записываем задание в docs/task.md (содержимое задачи из task.content)
     docs_dir = Path(project_path) / "docs"
@@ -285,7 +333,8 @@ async def process_task(task: dict, config: dict, agent_name: str):
     # Если дата коммита в будущем — ждём её наступления перед push
     if commit_date:
         await wait_commit_date(commit_date)
-    run_git(project_path, "push")
+    # push -u: новая ветка (созданная checkout -B) иначе падает с «no upstream branch»
+    run_git(project_path, "push", "-u", "origin", branch)
     logger.info("Задача %s закоммичена и запушена", task['name'])
 
 
@@ -294,47 +343,57 @@ async def run_foreground():
     setup_logging()
     config = load_config()
     apply_env_config(config)
+    server_url = config.get("server") or DEFAULT_CONFIG["server"]
     server = ServerClient(
-        config["server"],
+        server_url,
         config.get("login", DEFAULT_CONFIG["login"]),
         config.get("password", DEFAULT_CONFIG["password"]),
     )
-    agent_name = config["agent"]
+    agent_name = config.get("agent") or DEFAULT_CONFIG["agent"]
     poll_interval = get_poll_interval()
     logger.info(
         "Foreground запущен. Агент: %s, сервер: %s, интервал опроса: %d сек",
-        agent_name, config["server"], poll_interval,
+        agent_name, server_url, poll_interval,
     )
 
-    while True:
-        try:
-            tasks = []
+    try:
+        while True:
             try:
-                tasks = await server.planned_tasks(agent_name)
-                logger.info("Получено задач с сервера: %d", len(tasks))
-            except httpx.ConnectError as e:
-                logger.exception("Сервер недоступен: %s", e)
-            except httpx.TimeoutException:
-                logger.warning("Таймаут подключения к серверу")
-
-            # Берём только одну задачу за цикл: после обработки выходим из перебора
-            for task in tasks:
-                started = await server.task_start(task["id"], agent_name)
-                if not started.get("ok"):
-                    logger.info("Задача %s уже взята другим воркером", task["name"])
-                    continue
+                tasks = []
                 try:
-                    await process_task(task, config, agent_name)
-                    await server.task_done(task["id"], agent_name)
-                    logger.info("Задача %s выполнена", task["name"])
-                except Exception as e:
-                    logger.exception("Ошибка при выполнении задачи %s", task["name"])
-                    try:
-                        await server.task_error(task["id"], agent_name, str(e))
-                    except Exception:
-                        logger.exception("Не удалось отправить ошибку на сервер")
-                break
-        except Exception:
-            logger.exception("Ошибка цикла foreground")
+                    tasks = await server.planned_tasks(agent_name)
+                    logger.info("Получено задач с сервера: %d", len(tasks))
+                except httpx.HTTPStatusError as e:
+                    logger.error("Сервер ответил %s: %s", e.response.status_code, e)
+                except httpx.ConnectError as e:
+                    logger.exception("Сервер недоступен: %s", e)
+                except httpx.TimeoutException:
+                    logger.warning("Таймаут подключения к серверу")
 
-        await asyncio.sleep(poll_interval)
+                # Берём только одну задачу за цикл: после обработки выходим из перебора
+                for task in tasks:
+                    started = await server.task_start(task["id"], agent_name)
+                    if not started.get("ok"):
+                        logger.info("Задача %s уже взята другим воркером", task["name"])
+                        continue
+                    try:
+                        await process_task(task, config, agent_name)
+                        await server.task_done(task["id"], agent_name)
+                        logger.info("Задача %s выполнена", task["name"])
+                    except Exception as e:
+                        logger.exception("Ошибка при выполнении задачи %s", task["name"])
+                        try:
+                            await server.task_error(task["id"], agent_name, str(e))
+                        except Exception:
+                            logger.exception("Не удалось отправить ошибку на сервер")
+                    break
+            except Exception:
+                logger.exception("Ошибка цикла foreground")
+
+            await asyncio.sleep(poll_interval)
+    finally:
+        try:
+            await server.close()
+        except Exception:
+            logger.exception("Не удалось закрыть HTTP-клиент")
+        logger.info("Foreground остановлен")

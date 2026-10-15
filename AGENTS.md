@@ -97,12 +97,14 @@ docker run -d \
 ## Workflow задачи (foreground, `src/foreground.py`)
 
 1. Каждые `POLL_INTERVAL` секунд (env, по умолчанию 300) запрашивает у сервера задачи со статусом `planned`
-2. `task_start` → `git pull` → `git checkout <ветка>` (ветка из задачи, иначе ветка
-   по умолчанию проекта `projects.branch`, иначе `main`)
+2. `task_start` → чистка грязного дерева (`reset --hard` + `clean -fd`, если есть
+   изменения предыдущей задачи) → `git fetch` → `git checkout <ветка>` →
+   `git pull --ff-only` (ветка из задачи, иначе ветка по умолчанию проекта
+   `projects.branch`, иначе `main`)
 3. Содержимое задачи (`task.content`) записывается в `docs/task.md` проекта
 4. AI выполняет задание из `docs/task.md`
 5. `git add -A` → коммит (дата берётся из `get_commit_date`, если команда в PATH; если дата
-   коммита в будущем — ожидание её наступления перед push) → `push`
+   коммита в будущем — ожидание её наступления перед push) → `push -u origin <ветка>`
 6. Отчёт на сервер: `task_done` либо `task_error`
 
 ## Конвенции
