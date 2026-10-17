@@ -18,7 +18,6 @@ check_auth($config);
 
 <header>
   <h1>BayLang <small>Task Server</small></h1>
-  <span id="tz" title="Часовой пояс пользователя; на сервере даты хранятся в UTC">🕒</span>
   <button id="btn-settings" title="Настройки">⚙️</button>
 </header>
 
@@ -78,7 +77,7 @@ check_auth($config);
     <label>Проект <select name="project_id" required></select></label>
     <label>Агент <select name="agent_id" required></select></label>
     <label>Ветка <input name="branch" placeholder="main"></label>
-    <label>Выполнить не ранее (<span id="tz-label">местное время</span>) <input name="execute_at" type="datetime-local"></label>
+    <label>Выполнить не ранее <input name="execute_at" type="datetime-local"></label>
     <label>Статус <select name="status"></select></label>
     <label>Задание (docs/task.md)
       <textarea name="content" rows="10" placeholder="Markdown-описание задания для агента..."></textarea>

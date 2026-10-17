@@ -125,13 +125,8 @@ def reload_projects(config: dict) -> bool:
     projects_dir = os.getenv("BAYLANG_PROJECTS_DIR")
     if projects_dir:
         if Path(projects_dir).is_dir():
-            scanned = scan_projects_dir(projects_dir)
-            changed = scanned != config.get("projects")
-            config["projects"] = scanned
-            if changed:
-                logger.info("Проекты из папки %s: %s", projects_dir, ", ".join(scanned) or "нет")
-            return changed
-        logger.warning("BAYLANG_PROJECTS_DIR=%r не существует, используется config.json", projects_dir)
+            config["projects"] = scan_projects_dir(projects_dir)
+            return True
 
     return False
 
@@ -140,10 +135,8 @@ def apply_env_config(config: dict) -> bool:
     """Перекрывает config.json переменными окружения BAYLANG_*.
 
     Если переменная установлена и не пустая — её значение имеет приоритет
-    над config.json. Проекты обновляются через reload_projects.
-    Возвращает True, если конфиг изменился.
+    над config.json.
     """
-    changed = False
     for key, env_name in (
         ("server", "BAYLANG_SERVER"),
         ("login", "BAYLANG_LOGIN"),
@@ -153,9 +146,6 @@ def apply_env_config(config: dict) -> bool:
         value = os.getenv(env_name)
         if value:
             config[key] = value
-            changed = True
-
-    return reload_projects(config) or changed
 
 
 def load_config() -> dict:
@@ -304,7 +294,6 @@ async def process_task(task: dict, config: dict, agent_name: str):
     except GitError as e:
         raise RuntimeError(f"Не git-репозиторий или ошибка статуса: {e}") from e
     if status:
-        logger.warning("Грязное дерево — сбрасываем изменения предыдущей задачи")
         run_git(project_path, "reset", "--hard")
         run_git(project_path, "clean", "-fd")
 
@@ -332,6 +321,9 @@ async def process_task(task: dict, config: dict, agent_name: str):
     # Создаём AI с указанием path и выполняем задание
     ai = AI(build_software_engineer(path=project_path))
     answer = await ai.send("Изучи проект и выполни задание из docs/task.md")
+    
+    # Save history
+    ai.save()
 
     # Коммит (с датой из get_commit_date, если есть в PATH) и push
     run_git(project_path, "add", "-A")
@@ -363,10 +355,6 @@ async def run_foreground():
     )
     agent_name = config.get("agent") or DEFAULT_CONFIG["agent"]
     poll_interval = get_poll_interval()
-    logger.info(
-        "Foreground запущен. Агент: %s, сервер: %s, интервал опроса: %d сек",
-        agent_name, server_url, poll_interval,
-    )
 
     try:
         while True:
@@ -404,10 +392,9 @@ async def run_foreground():
             except Exception:
                 logger.exception("Ошибка цикла foreground")
 
-            await asyncio.sleep(poll_interval)
+            break
     finally:
         try:
             await server.close()
         except Exception:
             logger.exception("Не удалось закрыть HTTP-клиент")
-        logger.info("Foreground остановлен")

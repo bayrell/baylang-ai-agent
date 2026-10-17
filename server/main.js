@@ -122,8 +122,8 @@ async function loadTasks() {
             📁 ${esc(t.project_name)}
           </div>
           <div class="task-meta">
-            <span class="badge st-${esc(t.status)}">${STATUSES[t.status] || esc(t.status)}</span> · 🤖 ${esc(t.agent_name)} ·
-            🌿 ${esc(t.branch || "—")} · 🕒 ${esc(t.execute_at ? utcToLocal(t.execute_at) : "сразу")}
+            <span class="badge st-${esc(t.status)}">${STATUSES[t.status] || esc(t.status)}</span> · ${esc(t.agent_name)} ·
+            ${esc(t.branch || "—")} · ${esc(t.execute_at ? utcToLocal(t.execute_at) : "сразу")}
           </div>
           ${t.status === "error" && t.error ? `<div class="task-error">⚠️ ${esc(t.error)}</div>` : ""}
         </div>
@@ -180,7 +180,7 @@ function tableHtml(items, prefix, showBranch = false) {
         <tr>
           <td>${esc(i.name)}</td>
           <td><code>${esc(i.api_name)}</code></td>
-          ${showBranch ? `<td>🌿 ${esc(i.branch || "—")}</td>` : ""}
+          ${showBranch ? `<td>${esc(i.branch || "—")}</td>` : ""}
           <td class="col-actions">
             <button data-${prefix}-edit="${i.id}" title="Редактировать">✏️</button>
             <button data-${prefix}-del="${i.id}" title="Удалить">🗑</button>
@@ -269,11 +269,6 @@ function bindItemDialog(opts) {
 // ---------- Инициализация ----------
 
 function init() {
-  // часовой пояс пользователя в шапке и подписи поля времени
-  const tzText = `${TZ} (UTC${tzOffset()})`;
-  $("#tz").textContent = `🕒 ${tzText}`;
-  $("#tz-label").textContent = tzText;
-
   // навигация по страницам (кнопки "назад", меню настроек, шестерёнка)
   document.addEventListener("click", (e) => {
     const btn = e.target.closest("[data-view]");

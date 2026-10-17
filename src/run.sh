@@ -12,4 +12,9 @@ if [ -n "$GIT_USER_EMAIL" ]; then
     git config --global user.email "$GIT_USER_EMAIL"
 fi
 
-exec python3 "$DIR/main.py" "$@"
+interval=${POOL_INTERVAL:-300}
+
+while true; do
+    python3 "$DIR/main.py" "$@"
+    sleep interval
+done
