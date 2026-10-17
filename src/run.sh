@@ -16,5 +16,5 @@ interval=${POOL_INTERVAL:-300}
 
 while true; do
     python3 "$DIR/main.py" "$@"
-    sleep interval
+    sleep $interval
 done
