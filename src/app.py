@@ -28,7 +28,7 @@ from pydantic_ai.models.openrouter import (
 from pydantic_ai.providers.openrouter import OpenRouterProvider
 from pydantic_ai.capabilities import AbstractCapability, LocalWorkspace, Hooks
 from pydantic_ai.toolsets import AgentToolset, FunctionToolset
-from pydantic_ai_harness import FileSystem, RepoContext, SummarizingCompaction
+from pydantic_ai_harness import FileSystem, RepoContext, SummarizingCompaction, WarnNearLimits
 
 
 APP_URL = "https://baylang.com/"
@@ -204,6 +204,9 @@ def build_software_engineer(path=None, capabilities=None):
         FileSystem(content_hashes=False),
         RepoContext(),
         GitDiffTools(path=path),
+        WarnNearLimits(
+            max_iterations=100,
+        ),
         SummarizingCompaction(
             max_fraction=0.6,
             preserve_first_user_message=True,
