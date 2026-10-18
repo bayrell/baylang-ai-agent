@@ -18,6 +18,7 @@ from pydantic_ai import (
     UserPromptPart,
     TextPart,
     FunctionToolCallEvent,
+    UsageLimits,
 )
 from pydantic_ai.exceptions import ToolRetryError
 from pydantic_ai.models.openrouter import (
@@ -286,6 +287,7 @@ class AI:
         result = await self.agent.run(
             user_message,
             message_history=self.context,
+            usage_limits=UsageLimits(request_limit=None),
         )
 
         self.history.append(

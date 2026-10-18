@@ -320,7 +320,7 @@ async def process_task(task: dict, config: dict, agent_name: str):
 
     # Создаём AI с указанием path и выполняем задание
     ai = AI(build_software_engineer(path=project_path))
-    answer = await ai.send("Изучи проект и выполни задание из docs/task.md")
+    answer = await ai.send("Прочитай и выполни задание из docs/task.md")
     
     # Save history
     ai.save()
